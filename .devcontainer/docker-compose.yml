@@ -1,10 +1,8 @@
-version: '3'
+version: '3.9'
 services:
-  loaction-service:
-    build:
-      context: .
-    image: elaina/loaction
-    container_name: loaction-container
+  location-service:
+    image: elaina/location
+    container_name: location-container
     environment:
       - DISPLAY=${DISPLAY}
       - NVIDIA_VISIBLE_DEVICES=all
@@ -14,13 +12,22 @@ services:
     volumes:
       # - ${XAUTHORITY}:/root/.Xauthority
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ./..:/home/Elaina/loaction
+      - ./..:/home/Elaina/location
     network_mode: host
-    pid: "host" # 添加 pid 命名空间共享
-    ipc: "host" # 添加 ipc 命名空间共享    
+    pid: "host"
+    ipc: "host"
     privileged: true
     stdin_open: true
     tty: true
     user: "Elaina"
     runtime: "nvidia"
-    working_dir: "/home/Elaina/loaction" # 指定默认工作目录
+    working_dir: "/home/Elaina/location"
+    # profiles:
+    # - build-required
+
+  builder:
+    build:
+      context: .
+    image: elaina/location
+    profiles:
+      - build-required
