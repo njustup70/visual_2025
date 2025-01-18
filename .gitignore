@@ -1,0 +1,8 @@
+build/
+.cache 
+cmake-build-debug/
+.idea/
+install/
+devel/
+log/
+.vscode/start_program

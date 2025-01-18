@@ -1,0 +1,47 @@
+{
+    "name": "loaction-container",
+    "image": "elaina/loaction",
+    "workspaceFolder": "/home/Elaina/loaction",
+    // "shutdownAction": "stopCompose",
+    "runArgs": [
+        "--privileged",
+        "--network=host",
+        "--ipc=host",
+        "--pid=host",
+        "--env",
+        "DISPLAY=${DISPLAY}",
+        "--env",
+        "NVIDIA_VISIBLE_DEVICES=all",
+        "--env",
+        "NVIDIA_DRIVER_CAPABILITIES=all",
+        "--env",
+        "OMP_WAIT_POLICY=passive",
+        "--env",
+        "TERM=xterm-256color",
+        "--volume",
+        "/tmp/.X11-unix:/tmp/.X11-unix",
+        "--volume",
+        "./..:/home/Elaina/loaction",
+        "--runtime=nvidia",
+        "--user=Elaina",
+        "--workdir=/home/Elaina/loaction"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "llvm-vs-code-extensions.vscode-clangd",
+                "twxs.cmake",
+                "josetr.cmake-language-support-vscode",
+                "ms-vscode.cmake-tools",
+                "cschlosser.doxdocgen",
+                "augustocdias.tasks-shell-input",
+                "ms-vscode.cpptools",
+                "ms-python.python",
+                "ms-iot.vscode-ros"
+            ]
+        },
+        "jetbrains": {
+            "extensions": []
+        }
+    }
+}
