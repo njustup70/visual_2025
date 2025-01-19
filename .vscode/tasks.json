@@ -230,7 +230,7 @@
             },
             "hide": true,
             "detail": "创建Run程序快捷方式",
-            "dependsOn": "ROS2:编译整个项目"
+            // "dependsOn": "ROS2:编译整个项目"
         },
         {
             "type": "shell",
