@@ -29,11 +29,14 @@ public:
         this->get_parameter("rosbag_root", _rosbag_root);
         // this->get_parameter("rosbag_file", rosbag_file);
         // 查找当前目录下带.db3后缀的文件
-        for (const auto &entry : std::filesystem::directory_iterator(_rosbag_root))
+        std::filesystem::path rosbag_root_abs = std::filesystem::absolute(_rosbag_root);
+        fmt::print("rosbag_root_abs: {}\n", rosbag_root_abs.string());
+        for (const auto &entry : std::filesystem::directory_iterator(rosbag_root_abs))
         {
             if (entry.path().extension() == ".db3")
             {
                 rosbag_file = entry.path().string();
+                fmt::print("find rosbag file: {}\n", rosbag_file);
                 break;
             }
         }
@@ -45,7 +48,7 @@ public:
         // pointcloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/livox/lidar", 10);
         signal(SIGINT, on_exit);
 
-        // reader_.open(rosbag_file);
+        reader_.open(rosbag_file);
         processing_thread_ = std::make_shared<std::thread>(&RosbagPlayer::play_bag, this);
     }
 
