@@ -31,6 +31,8 @@ public:
         // 查找当前目录下带.db3后缀的文件
         std::filesystem::path rosbag_root_abs = std::filesystem::absolute(_rosbag_root);
         fmt::print("rosbag_root_abs: {}\n", rosbag_root_abs.string());
+        // 绝对路径+文件名
+        auto yaml_file_path = rosbag_root_abs.string() + "/metadata.yaml";
         for (const auto &entry : std::filesystem::directory_iterator(rosbag_root_abs))
         {
             if (entry.path().extension() == ".db3")
@@ -49,6 +51,7 @@ public:
         signal(SIGINT, on_exit);
 
         reader_.open(rosbag_file);
+        getPlayYamlData(yaml_file_path);
         processing_thread_ = std::make_shared<std::thread>(&RosbagPlayer::play_bag, this);
     }
 
@@ -61,28 +64,29 @@ public:
     }
 
 private:
-    void getPlayYamlData()
+    void getPlayYamlData(std::string yaml_file_path)
     {
-        auto yaml_file = _rosbag_root + "metadata.yaml";
-        YAML::Node yaml_node = YAML::LoadFile(yaml_file);
+        // auto yaml_file = _rosbag_root + "metadata.yaml";
+        YAML::Node yaml_node = YAML::LoadFile(yaml_file_path);
         if (yaml_node["rosbag2_bagfile_information"]["topics_with_message_count"])
         {
             const auto &topics = yaml_node["rosbag2_bagfile_information"]["topics_with_message_count"];
             for (auto topic : topics)
             {
-                if (topic["topic_metadata"]["type"].as<std::string>() == "sensor_msgs/ msg/PointCloud2")
+                std::string topic_type = topic["topic_metadata"]["type"].as<std::string>();
+                if (topic_type == "sensor_msgs/msg/PointCloud2")
                 {
                     _pointcloud_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find cloudpoint topic: {}\n", _pointcloud_topic_name);
                     break;
                 }
-                if (topic["topic_metadata"]["type"].as<std::string>() == "sensor_msgs/msg/Imu")
+                if (topic_type == "sensor_msgs/msg/Imu")
                 {
                     _imu_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find imu topic: {}\n", _imu_topic_name);
                     break;
                 }
-                if (topic["topic_metadata"]["type"].as<std::string>() == "tf2_msgs/msg/TFMessage")
+                if (topic_type == "tf2_msgs/msg/TFMessage")
                 {
                     _tf_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find tf topic: {}\n", _tf_topic_name);
