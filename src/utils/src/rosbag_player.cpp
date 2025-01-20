@@ -70,6 +70,7 @@ private:
         YAML::Node yaml_node = YAML::LoadFile(yaml_file_path);
         if (yaml_node["rosbag2_bagfile_information"]["topics_with_message_count"])
         {
+
             const auto &topics = yaml_node["rosbag2_bagfile_information"]["topics_with_message_count"];
             for (auto topic : topics)
             {
@@ -78,19 +79,19 @@ private:
                 {
                     _pointcloud_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find cloudpoint topic: {}\n", _pointcloud_topic_name);
-                    break;
+                    // break;
                 }
                 if (topic_type == "sensor_msgs/msg/Imu")
                 {
                     _imu_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find imu topic: {}\n", _imu_topic_name);
-                    break;
+                    // break;
                 }
                 if (topic_type == "tf2_msgs/msg/TFMessage")
                 {
                     _tf_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find tf topic: {}\n", _tf_topic_name);
-                    break;
+                    // break;
                 }
             }
         }
