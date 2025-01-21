@@ -112,43 +112,7 @@ private:
             auto bag_message = _reader.read_next();
             auto ros_time = rclcpp::Clock().now();
             auto topic_name = bag_message->topic_name;
-            if (_pointcloud_publishers.count(topic_name) > 0)
-            {
-                auto pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
-                rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serialization;
-                rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
-                serialization.deserialize_message(&serialized_msg, pointcloud_msg.get());
-                pointcloud_msg->header.stamp = ros_time;
-                _pointcloud_publishers[topic_name]->publish(*pointcloud_msg);
-            }
-            if (_tf_publishers.count(topic_name) > 0)
-            {
-                auto tf_msg = std::make_shared<tf2_msgs::msg::TFMessage>();
-                rclcpp::Serialization<tf2_msgs::msg::TFMessage> serialization;
-                rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
-                serialization.deserialize_message(&serialized_msg, tf_msg.get());
-                for (auto &tf : tf_msg->transforms)
-                {
-                    tf.header.stamp = ros_time;
-                }
-                _tf_publishers[topic_name]->publish(*tf_msg);
-            }
-            if (_imu_publishers.count(topic_name) > 0)
-            {
-                auto imu_msg = std::make_shared<sensor_msgs::msg::Imu>();
-                rclcpp::Serialization<sensor_msgs::msg::Imu> serialization;
-                rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
-                serialization.deserialize_message(&serialized_msg, imu_msg.get());
-                imu_msg->header.stamp = ros_time;
-                _imu_publishers[topic_name]->publish(*imu_msg);
-            }
-            // 范类型发布
-            //  if (_topic_publish_map.count(topic_name) > 0)
-            //  {
-            //      rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
-
-            //     _topic_publish_map[topic_name]->publish(serialized_msg);
-            // }
+            publishTopic(topic_name, bag_message);
             auto end_time = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
             if ((duration < 100) && (duration > 1))
@@ -160,7 +124,67 @@ private:
         RCLCPP_INFO(this->get_logger(), "No more messages in the bag.");
         rclcpp::shutdown();
     }
-
+    rclcpp::Time publishTopic(const std::string &topic_name, std::shared_ptr<rosbag2_storage::SerializedBagMessage> bag_message)
+    {
+        // auto bag_message = _reader.read_next();
+        auto ros_time = rclcpp::Clock().now();
+        // 返回阻塞信息;
+        rclcpp::Time sleep_time = rclcpp::Time(0, 0);
+        if (_pointcloud_publishers.count(topic_name) > 0)
+        {
+            auto pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
+            rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serialization;
+            rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
+            serialization.deserialize_message(&serialized_msg, pointcloud_msg.get());
+            sleep_time = pointcloud_msg->header.stamp;
+            pointcloud_msg->header.stamp = ros_time;
+            _pointcloud_publishers[topic_name]->publish(*pointcloud_msg);
+        }
+        else if (_tf_publishers.count(topic_name) > 0)
+        {
+            auto tf_msg = std::make_shared<tf2_msgs::msg::TFMessage>();
+            rclcpp::Serialization<tf2_msgs::msg::TFMessage> serialization;
+            rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
+            serialization.deserialize_message(&serialized_msg, tf_msg.get());
+            // 赋值任意一个
+            sleep_time = tf_msg->transforms[0].header.stamp;
+            for (auto &tf : tf_msg->transforms)
+            {
+                tf.header.stamp = ros_time;
+            }
+            _tf_publishers[topic_name]->publish(*tf_msg);
+        }
+        else if (_imu_publishers.count(topic_name) > 0)
+        {
+            auto imu_msg = std::make_shared<sensor_msgs::msg::Imu>();
+            rclcpp::Serialization<sensor_msgs::msg::Imu> serialization;
+            rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
+            serialization.deserialize_message(&serialized_msg, imu_msg.get());
+            sleep_time = imu_msg->header.stamp;
+            imu_msg->header.stamp = ros_time;
+            _imu_publishers[topic_name]->publish(*imu_msg);
+        }
+        // 范类型发布
+        //  if (topic_type == "sensor_msgs/msg/PointCloud2" || topic_type == "sensor_msgs/msg/Imu" || topic_type == "tf2_msgs/msg/TFMessage")
+        //  {
+        //      auto topic_name = topic["topic_metadata"]["name"].as<std::string>();
+        //      _topic_publish_map[topic_name] = this->create_generic_publisher(topic_name, topic_type, 10);
+        //  }
+        return sleep_time;
+    }
+    void playBagAsync()
+    {
+        while (rclcpp::ok())
+        {
+            if (!_reader.has_next())
+            {
+                _reader.open(_rosbag_file);
+            }
+            auto bag_message = _reader.read_next();
+            auto topic_name = bag_message->topic_name;
+            publishTopic(topic_name, bag_message);
+        }
+    }
     std::unordered_map<std::string, rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr> _pointcloud_publishers;
     std::unordered_map<std::string, rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr> _imu_publishers;
     std::unordered_map<std::string, rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr> _tf_publishers;
@@ -170,6 +194,7 @@ private:
     std::string _rosbag_root;
     // 存话题名称与对应publish的映射
     std::unordered_map<std::string, rclcpp::GenericPublisher::SharedPtr> _topic_publish_map;
+    // std::unordered_map<std::string, >
 };
 
 RCLCPP_COMPONENTS_REGISTER_NODE(RosbagPlayer)
