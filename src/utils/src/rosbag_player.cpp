@@ -50,7 +50,6 @@ public:
         }
         // _pointcloud_publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("/livox/lidar", 10);
         signal(SIGINT, on_exit);
-
         _reader.open(_rosbag_file);
         getPlayYamlData(yaml_file_path);
         _processing_thread = std::make_shared<std::thread>(&RosbagPlayer::play_bag, this);
@@ -97,6 +96,12 @@ private:
                     _tf_publishers[_tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(_tf_topic_name, 10);
                     // _topic_publish_map[_tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(_tf_topic_name, 10);
                 }
+                // 范类型发布
+                //  if (topic_type == "sensor_msgs/msg/PointCloud2" || topic_type == "sensor_msgs/msg/Imu" || topic_type == "tf2_msgs/msg/TFMessage")
+                //  {
+                //      auto topic_name = topic["topic_metadata"]["name"].as<std::string>();
+                //      _topic_publish_map[topic_name] = this->create_generic_publisher(topic_name, topic_type, 10);
+                //  }
             }
         }
     }
@@ -146,7 +151,13 @@ private:
                 // _imu_publisher->publish(*imu_msg);
                 _imu_publishers[_imu_topic_name]->publish(*imu_msg);
             }
-            // if()
+            // 范类型发布
+            //  if (_topic_publish_map.count(topic_name) > 0)
+            //  {
+            //      rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
+
+            //     _topic_publish_map[topic_name]->publish(serialized_msg);
+            // }
             auto end_time = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
             if ((duration < 100) && (duration > 1))
@@ -170,7 +181,7 @@ private:
     std::string _imu_topic_name;
     std::string _tf_topic_name;
     // 存话题名称与对应publish的映射
-    std::unordered_map<std::string, rclcpp::PublisherBase::SharedPtr> _topic_publish_map;
+    std::unordered_map<std::string, rclcpp::GenericPublisher::SharedPtr> _topic_publish_map;
 };
 
 RCLCPP_COMPONENTS_REGISTER_NODE(RosbagPlayer)
