@@ -11,7 +11,8 @@ services:
       - TERM=xterm-256color
     volumes:
       # - ${XAUTHORITY}:/root/.Xauthority
-      - /tmp/.X11-unix:/tmp/.X11-unix
+      #可以在windows下使用WSL2的X11服务器但是需要在windows环境目录中添加WSL_X11_SOCKET环境变量
+      - ${WSL_X11_SOCKET:-/tmp/.X11-unix}:/tmp/.X11-unix  #如果没有设置WSL_X11_SOCKET则使用默认的/tmp/.X11-unix
       - ./..:/home/Elaina/location
     network_mode: host
     pid: "host"
