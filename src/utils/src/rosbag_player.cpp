@@ -24,10 +24,10 @@ public:
     RosbagPlayer(const rclcpp::NodeOptions &options)
         : Node("rosbag_player_node", options)
     {
-        // this->declare_parameter<std::string>("rosbag_file", "");
+        // this->declare_parameter<std::string>("_rosbag_file", "");
         this->declare_parameter("rosbag_root", "./");
         this->get_parameter("rosbag_root", _rosbag_root);
-        // this->get_parameter("rosbag_file", rosbag_file);
+        // this->get_parameter("_rosbag_file", _rosbag_file);
         // 查找当前目录下带.db3后缀的文件
         std::filesystem::path rosbag_root_abs = std::filesystem::absolute(_rosbag_root);
         fmt::print("rosbag_root_abs: {}\n", rosbag_root_abs.string());
@@ -37,29 +37,29 @@ public:
         {
             if (entry.path().extension() == ".db3")
             {
-                rosbag_file = entry.path().string();
-                fmt::print("find rosbag file: {}\n", rosbag_file);
+                _rosbag_file = entry.path().string();
+                fmt::print("find rosbag file: {}\n", _rosbag_file);
                 break;
             }
         }
-        if (rosbag_file.empty())
+        if (_rosbag_file.empty())
         {
             RCLCPP_ERROR(this->get_logger(), "No rosbag file found in %s", _rosbag_root.c_str());
             return;
         }
-        // pointcloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/livox/lidar", 10);
+        // _pointcloud_publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("/livox/lidar", 10);
         signal(SIGINT, on_exit);
 
-        reader_.open(rosbag_file);
+        _reader.open(_rosbag_file);
         getPlayYamlData(yaml_file_path);
-        processing_thread_ = std::make_shared<std::thread>(&RosbagPlayer::play_bag, this);
+        _processing_thread = std::make_shared<std::thread>(&RosbagPlayer::play_bag, this);
     }
 
     ~RosbagPlayer()
     {
-        if (processing_thread_ && processing_thread_->joinable())
+        if (_processing_thread && _processing_thread->joinable())
         {
-            processing_thread_->join();
+            _processing_thread->join();
         }
     }
 
@@ -100,13 +100,13 @@ private:
     {
         while (rclcpp::ok())
         {
-            if (!reader_.has_next())
+            if (!_reader.has_next())
             {
-                reader_.open(rosbag_file);
+                _reader.open(_rosbag_file);
             }
 
             auto start_time = std::chrono::high_resolution_clock::now();
-            auto bag_message = reader_.read_next();
+            auto bag_message = _reader.read_next();
             auto ros_time = rclcpp::Clock().now();
 
             if (bag_message->topic_name == _pointcloud_topic_name)
@@ -116,7 +116,7 @@ private:
                 rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
                 serialization.deserialize_message(&serialized_msg, pointcloud_msg.get());
                 pointcloud_msg->header.stamp = ros_time;
-                pointcloud_publisher_->publish(*pointcloud_msg);
+                _pointcloud_publisher->publish(*pointcloud_msg);
             }
             if (bag_message->topic_name == _imu_topic_name)
             {
@@ -125,7 +125,7 @@ private:
                 rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
                 serialization.deserialize_message(&serialized_msg, imu_msg.get());
                 imu_msg->header.stamp = ros_time;
-                imu_publisher_->publish(*imu_msg);
+                _imu_publisher->publish(*imu_msg);
             }
             // if()
             auto end_time = std::chrono::high_resolution_clock::now();
@@ -140,11 +140,11 @@ private:
         rclcpp::shutdown();
     }
 
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_publisher_;
-    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_publisher_;
-    rosbag2_cpp::Reader reader_;
-    std::shared_ptr<std::thread> processing_thread_;
-    std::string rosbag_file;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr _pointcloud_publisher;
+    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr _imu_publisher;
+    rosbag2_cpp::Reader _reader;
+    std::shared_ptr<std::thread> _processing_thread;
+    std::string _rosbag_file;
     std::string _rosbag_root;
     std::string _pointcloud_topic_name;
     std::string _imu_topic_name;
