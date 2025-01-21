@@ -10,6 +10,7 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_msgs/msg/tf_message.hpp>
 #include <thread>
 void on_exit([[maybe_unused]] int sig)
 {
@@ -74,24 +75,27 @@ private:
             const auto &topics = yaml_node["rosbag2_bagfile_information"]["topics_with_message_count"];
             for (auto topic : topics)
             {
-                std::string topic_type = topic["topic_metadata"]["type"].as<std::string>();
+                auto topic_type = topic["topic_metadata"]["type"].as<std::string>();
                 if (topic_type == "sensor_msgs/msg/PointCloud2")
                 {
-                    _pointcloud_topic_name = topic["topic_metadata"]["name"].as<std::string>();
+                    auto pointcloud_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find cloudpoint topic: {}\n", _pointcloud_topic_name);
-                    // break;
+                    _pointcloud_publishers[pointcloud_topic_name] = this->create_publisher<sensor_msgs::msg::PointCloud2>(pointcloud_topic_name, 10);
+                    // _topic_publish_map[pointcloud_topic_name] = this->create_publisher<sensor_msgs::msg::PointCloud2>(pointcloud_topic_name, 10);
                 }
-                if (topic_type == "sensor_msgs/msg/Imu")
+                else if (topic_type == "sensor_msgs/msg/Imu")
                 {
                     _imu_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find imu topic: {}\n", _imu_topic_name);
-                    // break;
+                    _imu_publishers[_imu_topic_name] = this->create_publisher<sensor_msgs::msg::Imu>(_imu_topic_name, 10);
+                    // _topic_publish_map[_imu_topic_name] = this->create_publisher<sensor_msgs::msg::Imu>(_imu_topic_name, 10);
                 }
-                if (topic_type == "tf2_msgs/msg/TFMessage")
+                else if (topic_type == "tf2_msgs/msg/TFMessage")
                 {
                     _tf_topic_name = topic["topic_metadata"]["name"].as<std::string>();
                     fmt::print("find tf topic: {}\n", _tf_topic_name);
-                    // break;
+                    _tf_publishers[_tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(_tf_topic_name, 10);
+                    // _topic_publish_map[_tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(_tf_topic_name, 10);
                 }
             }
         }
@@ -108,24 +112,39 @@ private:
             auto start_time = std::chrono::high_resolution_clock::now();
             auto bag_message = _reader.read_next();
             auto ros_time = rclcpp::Clock().now();
-
-            if (bag_message->topic_name == _pointcloud_topic_name)
+            auto topic_name = bag_message->topic_name;
+            if (_pointcloud_publishers.count(topic_name) > 0)
             {
                 auto pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
                 rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serialization;
                 rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
                 serialization.deserialize_message(&serialized_msg, pointcloud_msg.get());
                 pointcloud_msg->header.stamp = ros_time;
-                _pointcloud_publisher->publish(*pointcloud_msg);
+                // _pointcloud_publisher->publish(*pointcloud_msg);
+                _pointcloud_publishers[topic_name]->publish(*pointcloud_msg);
             }
-            if (bag_message->topic_name == _imu_topic_name)
+            if (_tf_publishers.count(topic_name) > 0)
+            {
+                auto tf_msg = std::make_shared<tf2_msgs::msg::TFMessage>();
+                rclcpp::Serialization<tf2_msgs::msg::TFMessage> serialization;
+                rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
+                serialization.deserialize_message(&serialized_msg, tf_msg.get());
+                for (auto &tf : tf_msg->transforms)
+                {
+                    tf.header.stamp = ros_time;
+                }
+                // _tf_publisher->publish(*tf_msg);
+                _tf_publishers[_tf_topic_name]->publish(*tf_msg);
+            }
+            if (_imu_publishers.count(topic_name) > 0)
             {
                 auto imu_msg = std::make_shared<sensor_msgs::msg::Imu>();
                 rclcpp::Serialization<sensor_msgs::msg::Imu> serialization;
                 rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
                 serialization.deserialize_message(&serialized_msg, imu_msg.get());
                 imu_msg->header.stamp = ros_time;
-                _imu_publisher->publish(*imu_msg);
+                // _imu_publisher->publish(*imu_msg);
+                _imu_publishers[_imu_topic_name]->publish(*imu_msg);
             }
             // if()
             auto end_time = std::chrono::high_resolution_clock::now();
@@ -140,8 +159,9 @@ private:
         rclcpp::shutdown();
     }
 
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr _pointcloud_publisher;
-    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr _imu_publisher;
+    std::unordered_map<std::string, rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr> _pointcloud_publishers;
+    std::unordered_map<std::string, rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr> _imu_publishers;
+    std::unordered_map<std::string, rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr> _tf_publishers;
     rosbag2_cpp::Reader _reader;
     std::shared_ptr<std::thread> _processing_thread;
     std::string _rosbag_file;
@@ -149,6 +169,8 @@ private:
     std::string _pointcloud_topic_name;
     std::string _imu_topic_name;
     std::string _tf_topic_name;
+    // 存话题名称与对应publish的映射
+    std::unordered_map<std::string, rclcpp::PublisherBase::SharedPtr> _topic_publish_map;
 };
 
 RCLCPP_COMPONENTS_REGISTER_NODE(RosbagPlayer)
