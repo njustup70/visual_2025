@@ -25,10 +25,8 @@ public:
     RosbagPlayer(const rclcpp::NodeOptions &options)
         : Node("rosbag_player_node", options)
     {
-        // this->declare_parameter<std::string>("_rosbag_file", "");
         this->declare_parameter("rosbag_root", "./");
         this->get_parameter("rosbag_root", _rosbag_root);
-        // this->get_parameter("_rosbag_file", _rosbag_file);
         // 查找当前目录下带.db3后缀的文件
         std::filesystem::path rosbag_root_abs = std::filesystem::absolute(_rosbag_root);
         fmt::print("rosbag_root_abs: {}\n", rosbag_root_abs.string());
@@ -48,7 +46,6 @@ public:
             RCLCPP_ERROR(this->get_logger(), "No rosbag file found in %s", _rosbag_root.c_str());
             return;
         }
-        // _pointcloud_publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("/livox/lidar", 10);
         signal(SIGINT, on_exit);
         _reader.open(_rosbag_file);
         getPlayYamlData(yaml_file_path);
@@ -78,23 +75,20 @@ private:
                 if (topic_type == "sensor_msgs/msg/PointCloud2")
                 {
                     auto pointcloud_topic_name = topic["topic_metadata"]["name"].as<std::string>();
-                    fmt::print("find cloudpoint topic: {}\n", _pointcloud_topic_name);
+                    fmt::print("find cloudpoint topic: {}\n", pointcloud_topic_name);
                     _pointcloud_publishers[pointcloud_topic_name] = this->create_publisher<sensor_msgs::msg::PointCloud2>(pointcloud_topic_name, 10);
-                    // _topic_publish_map[pointcloud_topic_name] = this->create_publisher<sensor_msgs::msg::PointCloud2>(pointcloud_topic_name, 10);
                 }
                 else if (topic_type == "sensor_msgs/msg/Imu")
                 {
-                    _imu_topic_name = topic["topic_metadata"]["name"].as<std::string>();
-                    fmt::print("find imu topic: {}\n", _imu_topic_name);
-                    _imu_publishers[_imu_topic_name] = this->create_publisher<sensor_msgs::msg::Imu>(_imu_topic_name, 10);
-                    // _topic_publish_map[_imu_topic_name] = this->create_publisher<sensor_msgs::msg::Imu>(_imu_topic_name, 10);
+                    auto imu_topic_name = topic["topic_metadata"]["name"].as<std::string>();
+                    fmt::print("find imu topic: {}\n", imu_topic_name);
+                    _imu_publishers[imu_topic_name] = this->create_publisher<sensor_msgs::msg::Imu>(imu_topic_name, 10);
                 }
                 else if (topic_type == "tf2_msgs/msg/TFMessage")
                 {
-                    _tf_topic_name = topic["topic_metadata"]["name"].as<std::string>();
-                    fmt::print("find tf topic: {}\n", _tf_topic_name);
-                    _tf_publishers[_tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(_tf_topic_name, 10);
-                    // _topic_publish_map[_tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(_tf_topic_name, 10);
+                    auto tf_topic_name = topic["topic_metadata"]["name"].as<std::string>();
+                    fmt::print("find tf topic: {}\n", tf_topic_name);
+                    _tf_publishers[tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(tf_topic_name, 10);
                 }
                 // 范类型发布
                 //  if (topic_type == "sensor_msgs/msg/PointCloud2" || topic_type == "sensor_msgs/msg/Imu" || topic_type == "tf2_msgs/msg/TFMessage")
@@ -125,7 +119,6 @@ private:
                 rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
                 serialization.deserialize_message(&serialized_msg, pointcloud_msg.get());
                 pointcloud_msg->header.stamp = ros_time;
-                // _pointcloud_publisher->publish(*pointcloud_msg);
                 _pointcloud_publishers[topic_name]->publish(*pointcloud_msg);
             }
             if (_tf_publishers.count(topic_name) > 0)
@@ -138,8 +131,7 @@ private:
                 {
                     tf.header.stamp = ros_time;
                 }
-                // _tf_publisher->publish(*tf_msg);
-                _tf_publishers[_tf_topic_name]->publish(*tf_msg);
+                _tf_publishers[topic_name]->publish(*tf_msg);
             }
             if (_imu_publishers.count(topic_name) > 0)
             {
@@ -148,8 +140,7 @@ private:
                 rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
                 serialization.deserialize_message(&serialized_msg, imu_msg.get());
                 imu_msg->header.stamp = ros_time;
-                // _imu_publisher->publish(*imu_msg);
-                _imu_publishers[_imu_topic_name]->publish(*imu_msg);
+                _imu_publishers[topic_name]->publish(*imu_msg);
             }
             // 范类型发布
             //  if (_topic_publish_map.count(topic_name) > 0)
@@ -177,9 +168,6 @@ private:
     std::shared_ptr<std::thread> _processing_thread;
     std::string _rosbag_file;
     std::string _rosbag_root;
-    std::string _pointcloud_topic_name;
-    std::string _imu_topic_name;
-    std::string _tf_topic_name;
     // 存话题名称与对应publish的映射
     std::unordered_map<std::string, rclcpp::GenericPublisher::SharedPtr> _topic_publish_map;
 };
