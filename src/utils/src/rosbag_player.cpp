@@ -49,7 +49,7 @@ public:
         signal(SIGINT, on_exit);
         _reader.open(_rosbag_file);
         getPlayYamlData(yaml_file_path);
-        _processing_thread = std::make_shared<std::thread>(&RosbagPlayer::play_bag, this);
+        _processing_thread = std::make_shared<std::thread>(&RosbagPlayer::playBagAsync, this);
     }
 
     ~RosbagPlayer()
@@ -90,6 +90,11 @@ private:
                     fmt::print("find tf topic: {}\n", tf_topic_name);
                     _tf_publishers[tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(tf_topic_name, 10);
                 }
+                else
+                {
+                    continue;
+                }
+                _topic_names.push_back(topic["topic_metadata"]["name"].as<std::string>());
                 // 范类型发布
                 //  if (topic_type == "sensor_msgs/msg/PointCloud2" || topic_type == "sensor_msgs/msg/Imu" || topic_type == "tf2_msgs/msg/TFMessage")
                 //  {
@@ -182,7 +187,7 @@ private:
             }
             auto bag_message = _reader.read_next();
             auto topic_name = bag_message->topic_name;
-            if (_topic_publish_map.count(topic_name) > 0)
+            if (std::find(_topic_names.begin(), _topic_names.end(), topic_name) != _topic_names.end())
             {
                 // _topic_messages[topic_name].push_back(bag_message);
                 if (_topic_futures.count(topic_name) > 0)
@@ -225,6 +230,7 @@ private:
     std::unordered_map<std::string, rclcpp::GenericPublisher::SharedPtr> _topic_publish_map;
     std::unordered_map<std::string, rclcpp::Time> _topic_sleep_time;
     std::unordered_map<std::string, std::shared_ptr<std::future<bool>>> _topic_futures;
+    std::vector<std::string> _topic_names;
 };
 
 RCLCPP_COMPONENTS_REGISTER_NODE(RosbagPlayer)
