@@ -104,6 +104,10 @@ private:
             }
         }
     }
+    /**
+     * @brief 这里是以10hz的雷达作为参考,其他的话题序列化快不会触发延迟
+     *
+     */
     void play_bag()
     {
         while (rclcpp::ok())
@@ -134,7 +138,7 @@ private:
         // auto bag_message = _reader.read_next();
         auto ros_time = rclcpp::Clock().now();
         // 返回阻塞信息;
-        rclcpp::Time sleep_time = rclcpp::Time(0, 0);
+        auto sleep_time = rclcpp::Time(0, 0);
         if (_pointcloud_publishers.count(topic_name) > 0)
         {
             auto pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
@@ -187,25 +191,36 @@ private:
             }
             auto bag_message = _reader.read_next();
             auto topic_name = bag_message->topic_name;
+            auto start_time = std::chrono::high_resolution_clock::now();
             if (std::find(_topic_names.begin(), _topic_names.end(), topic_name) != _topic_names.end())
             {
-                // _topic_messages[topic_name].push_back(bag_message);
                 if (_topic_futures.count(topic_name) > 0)
                 {
+                    // fmt::print("time {} topic {}\n", _topic_sleep_time[topic_name].nanoseconds(), topic_name);
                     if (_topic_futures[topic_name]->valid())
                     {
                         _topic_futures[topic_name]->wait();
                     }
                 }
-                auto future = std::async(std::launch::async, [this, topic_name, bag_message]()
+                auto future = std::async(std::launch::async, [this, topic_name, bag_message, start_time]()
                                          {
                     //    auto start_time = std::chrono::high_resolution_clock::now();
                     auto time_stamp = publishTopic(topic_name, bag_message);
-                    auto sleep_time = _topic_sleep_time[topic_name] - time_stamp;
+                    if(_topic_sleep_time.count(topic_name)==0)
+                    {
+                        _topic_sleep_time[topic_name] = time_stamp;
+                        // fmt::print("first time: {} topic {}\n", time_stamp.nanoseconds(),topic_name);
+                    }
+                    auto sleep_time = time_stamp-_topic_sleep_time[topic_name]; 
+                    // fmt::print("sleep time: {}\n", sleep_time.nanoseconds());
                     _topic_sleep_time[topic_name] = time_stamp;
+                    auto sleep_util_time=start_time+std::chrono::nanoseconds(sleep_time.nanoseconds());
+                    //转化成为int64_t
+                    // fmt::print("sleep time: {} topic {}\n", sleep_util_time_ns,topic_name);
                     if(sleep_time.nanoseconds()>0)
                     {
-                        std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_time.nanoseconds()));
+                        // std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_time.nanoseconds()));
+                        std::this_thread::sleep_until(sleep_util_time);
                     }
                     return true; });
                 auto fut_ptr = std::make_shared<std::future<bool>>(std::move(future));
