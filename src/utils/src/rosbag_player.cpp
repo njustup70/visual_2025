@@ -78,18 +78,18 @@ private:
                     fmt::print("find cloudpoint topic: {}\n", pointcloud_topic_name);
                     _pointcloud_publishers[pointcloud_topic_name] = this->create_publisher<sensor_msgs::msg::PointCloud2>(pointcloud_topic_name, 10);
                 }
-                else if (topic_type == "sensor_msgs/msg/Imu")
-                {
-                    auto imu_topic_name = topic["topic_metadata"]["name"].as<std::string>();
-                    fmt::print("find imu topic: {}\n", imu_topic_name);
-                    _imu_publishers[imu_topic_name] = this->create_publisher<sensor_msgs::msg::Imu>(imu_topic_name, 10);
-                }
-                else if (topic_type == "tf2_msgs/msg/TFMessage")
-                {
-                    auto tf_topic_name = topic["topic_metadata"]["name"].as<std::string>();
-                    fmt::print("find tf topic: {}\n", tf_topic_name);
-                    _tf_publishers[tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(tf_topic_name, 10);
-                }
+                // else if (topic_type == "sensor_msgs/msg/Imu")
+                // {
+                //     auto imu_topic_name = topic["topic_metadata"]["name"].as<std::string>();
+                //     fmt::print("find imu topic: {}\n", imu_topic_name);
+                //     _imu_publishers[imu_topic_name] = this->create_publisher<sensor_msgs::msg::Imu>(imu_topic_name, 10);
+                // }
+                // else if (topic_type == "tf2_msgs/msg/TFMessage")
+                // {
+                //     auto tf_topic_name = topic["topic_metadata"]["name"].as<std::string>();
+                //     fmt::print("find tf topic: {}\n", tf_topic_name);
+                //     _tf_publishers[tf_topic_name] = this->create_publisher<tf2_msgs::msg::TFMessage>(tf_topic_name, 10);
+                // }
                 else
                 {
                     continue;
@@ -191,7 +191,7 @@ private:
             }
             auto bag_message = _reader.read_next();
             auto topic_name = bag_message->topic_name;
-            auto start_time = std::chrono::high_resolution_clock::now();
+
             if (std::find(_topic_names.begin(), _topic_names.end(), topic_name) != _topic_names.end())
             {
                 if (_topic_futures.count(topic_name) > 0)
@@ -200,12 +200,15 @@ private:
                     if (_topic_futures[topic_name]->valid())
                     {
                         _topic_futures[topic_name]->wait();
+                        // fmt::print("waitedtime: {}\n", std::chrono::high_resolution_clock::now().time_since_epoch().count());
                     }
                 }
+                auto start_time = std::chrono::high_resolution_clock::now();
                 auto future = std::async(std::launch::async, [this, topic_name, bag_message, start_time]()
                                          {
                     //    auto start_time = std::chrono::high_resolution_clock::now();
                     auto time_stamp = publishTopic(topic_name, bag_message);
+                    // fmt::print("publishtime:{}\n", std::chrono::high_resolution_clock::now().time_since_epoch().count());
                     if(_topic_sleep_time.count(topic_name)==0)
                     {
                         _topic_sleep_time[topic_name] = time_stamp;
@@ -216,6 +219,8 @@ private:
                     _topic_sleep_time[topic_name] = time_stamp;
                     auto sleep_util_time=start_time+std::chrono::nanoseconds(sleep_time.nanoseconds());
                     //转化成为int64_t
+                    // auto sleep_util_time_ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(sleep_util_time).time_since_epoch().count();
+                    // fmt::print("start time: {}\n" ,start_time.time_since_epoch().count());
                     // fmt::print("sleep time: {} topic {}\n", sleep_util_time_ns,topic_name);
                     if(sleep_time.nanoseconds()>0)
                     {
