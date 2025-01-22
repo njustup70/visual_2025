@@ -26,7 +26,9 @@ public:
         : Node("rosbag_player_node", options)
     {
         this->declare_parameter("rosbag_root", "./");
+        this->declare_parameter("use_async", false);
         this->get_parameter("rosbag_root", _rosbag_root);
+
         // 查找当前目录下带.db3后缀的文件
         std::filesystem::path rosbag_root_abs = std::filesystem::absolute(_rosbag_root);
         fmt::print("rosbag_root_abs: {}\n", rosbag_root_abs.string());
@@ -49,7 +51,15 @@ public:
         signal(SIGINT, on_exit);
         _reader.open(_rosbag_file);
         getPlayYamlData(yaml_file_path);
-        _processing_thread = std::make_shared<std::thread>(&RosbagPlayer::playBagAsync, this);
+        if (get_parameter("use_async").as_bool())
+        {
+            _processing_thread = std::make_shared<std::thread>(&RosbagPlayer::playBagAsync, this);
+        }
+        else
+        {
+            _processing_thread = std::make_shared<std::thread>(&RosbagPlayer::play_bag, this);
+        }
+        // _processing_thread = std::make_shared<std::thread>(&RosbagPlayer::playBagAsync, this);
     }
 
     ~RosbagPlayer()
@@ -200,7 +210,7 @@ private:
                     if (_topic_futures[topic_name]->valid())
                     {
                         _topic_futures[topic_name]->wait();
-                        fmt::print("waitedtime: {} topic {}\n", std::chrono::high_resolution_clock::now().time_since_epoch().count(), topic_name);
+                        // fmt::print("waitedtime: {} topic {}\n", std::chrono::high_resolution_clock::now().time_since_epoch().count(), topic_name);
                     }
                 }
                 auto start_time = std::chrono::high_resolution_clock::now();
@@ -219,9 +229,9 @@ private:
                     _topic_sleep_time[topic_name] = time_stamp;
                     auto sleep_util_time=start_time+std::chrono::nanoseconds(sleep_time.nanoseconds());
                     //转化成为int64_t
-                    auto sleep_util_time_ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(sleep_util_time).time_since_epoch().count();
+                    // auto sleep_util_time_ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(sleep_util_time).time_since_epoch().count();
                     // fmt::print("start time: {}\n" ,start_time.time_since_epoch().count());
-                    fmt::print("sleep time: {} topic {}\n", sleep_util_time_ns,topic_name);
+                    // fmt::print("sleep time: {} topic {}\n", sleep_util_time_ns,topic_name);
                     if(sleep_time.nanoseconds()>0)
                     {
                         // std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_time.nanoseconds()));
