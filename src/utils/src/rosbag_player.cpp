@@ -182,7 +182,36 @@ private:
             }
             auto bag_message = _reader.read_next();
             auto topic_name = bag_message->topic_name;
-            publishTopic(topic_name, bag_message);
+            if (_topic_publish_map.count(topic_name) > 0)
+            {
+                // _topic_messages[topic_name].push_back(bag_message);
+                if (_topic_futures.count(topic_name) > 0)
+                {
+                    if (_topic_futures[topic_name]->valid())
+                    {
+                        _topic_futures[topic_name]->wait();
+                    }
+                }
+                auto future = std::async(std::launch::async, [this, topic_name, bag_message]()
+                                         {
+                    //    auto start_time = std::chrono::high_resolution_clock::now();
+                    auto time_stamp = publishTopic(topic_name, bag_message);
+                    auto sleep_time = _topic_sleep_time[topic_name] - time_stamp;
+                    _topic_sleep_time[topic_name] = time_stamp;
+                    if(sleep_time.nanoseconds()>0)
+                    {
+                        std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_time.nanoseconds()));
+                    }
+                    return true; });
+                auto fut_ptr = std::make_shared<std::future<bool>>(std::move(future));
+                _topic_futures[topic_name] = fut_ptr;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            else
+            {
+                // std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                continue;
+            }
         }
     }
     std::unordered_map<std::string, rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr> _pointcloud_publishers;
@@ -194,7 +223,8 @@ private:
     std::string _rosbag_root;
     // 存话题名称与对应publish的映射
     std::unordered_map<std::string, rclcpp::GenericPublisher::SharedPtr> _topic_publish_map;
-    // std::unordered_map<std::string, >
+    std::unordered_map<std::string, rclcpp::Time> _topic_sleep_time;
+    std::unordered_map<std::string, std::shared_ptr<std::future<bool>>> _topic_futures;
 };
 
 RCLCPP_COMPONENTS_REGISTER_NODE(RosbagPlayer)
