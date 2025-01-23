@@ -1,0 +1,52 @@
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+from launch.actions import ExecuteProcess
+import glob
+import yaml
+topic_names=[]
+topic_types=[]
+def generate_launch_description():
+    parameters={"rosbag_root":"./","topic_suffix":"/bag"}
+    rosbag_root=parameters["rosbag_root"]
+    #转化成为绝对路径
+    rosbag_root=os.path.abspath(rosbag_root)
+    print(f"rosbag_root: {rosbag_root}")
+    yaml_file_path=os.path.join(rosbag_root,"metadata.yaml")
+    #查找绝对目录下后缀为.db3的文件
+    db_file_path = glob.glob(os.path.join(rosbag_root, "*.db3"))
+    if db_file_path:
+        db_file_path = db_file_path[0]  # 取第一个找到的.db3文件
+    else:
+        raise ValueError("No .db3 file found in the specified directory.")
+    getPlayYamlData(yaml_file_path)
+    ld=LaunchDescription()
+    #启动rosbag2播放器,开启循环模式
+    #重定向
+    topic_names_remap=[f"{topic_name}:={topic_name}{parameters['topic_suffix']}" for topic_name in topic_names]
+    print(f"topic_names_remap: {topic_names_remap}")
+    rosbag_node_exe=ExecuteProcess(cmd=["ros2","bag","play",db_file_path,"--topics"]+topic_names
+                                   +["--remap"]+topic_names_remap
+                                   ,output="screen")
+    ld.add_action(rosbag_node_exe)
+    return ld
+
+def getPlayYamlData(yaml_file_path:str):
+    with open(yaml_file_path, 'r') as file:
+        yaml_node = yaml.safe_load(file)
+    if "rosbag2_bagfile_information" in yaml_node:
+        topics = yaml_node["rosbag2_bagfile_information"].get("topics_with_message_count", [])
+        for topic in topics:
+                topic_metadata = topic.get("topic_metadata", {})
+                topic_type = topic_metadata.get("type", "")
+                if topic_type == "sensor_msgs/msg/PointCloud2" or topic_type == "sensor_msgs/msg/Imu" or topic_type == "tf2_msgs/msg/TFMessage": 
+                    topic_name = topic_metadata.get("name", "")
+                    print(f"find topic: {topic_name} topic type: {topic_type}")
+                    topic_types.append(topic_type)
+                    topic_names.append(topic_name)            
+                else:
+                    continue
+              
