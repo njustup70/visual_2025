@@ -1,3 +1,12 @@
+'''
+@Description: 用于播放rosbag2文件的launch文件
+会自动读取开启文件夹下的ros bag文件
+通过ros2bag与辅助节点来实现循环播放并时间戳一直往前
+只会发布PointCloud2,Imu,tf三种类型的消息
+@Author: Elaina
+@Email:1463967532@qq.com
+@Date: 2025-1-23 
+'''
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -31,9 +40,11 @@ def generate_launch_description():
     topic_names_remap=[f"{topic_name}:={topic_name}{parameters['topic_suffix']}" for topic_name in topic_names]
     # topic_names_list=[f"{topic_name}{parameters['topic_suffix']}" for topic_name in topic_names]
     print(f"topic_names_remap: {topic_names_remap}")
-    rosbag_node_exe=ExecuteProcess(cmd=["ros2","bag","play",db_file_path,"--topics"]+topic_names
+    #开启rosbag cli工具
+    rosbag_node_exe=ExecuteProcess(cmd=["ros2","bag","play","--loop",db_file_path,"--topics"]+topic_names
                                    +["--remap"]+topic_names_remap
                                    ,output="screen")
+    #开启rosbag监听辅助节点
     rosbag_listener=Node(package="utils",
         executable="rosbag_listener_node",
         name="rosbag_listener_node",
@@ -46,6 +57,13 @@ def generate_launch_description():
     return ld
 
 def getPlayYamlData(yaml_file_path:str):
+    """_summary_
+        这是一个获取rosbag2播放器的yaml文件的函数,会获得yaml文件中Pointcloud,imu,tf的topic名称和类型,
+        并往全局变量topic_names和topic_types中添加
+
+    Args:
+        yaml_file_path (str): _description_ yaml文件的路径
+    """
     with open(yaml_file_path, 'r') as file:
         yaml_node = yaml.safe_load(file)
     if "rosbag2_bagfile_information" in yaml_node:
