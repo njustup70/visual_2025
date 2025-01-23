@@ -9,8 +9,10 @@ import glob
 import yaml
 topic_names=[]
 topic_types=[]
+parameters={
+    "rosbag_root":"./",
+    "topic_suffix":"/bag"}
 def generate_launch_description():
-    parameters={"rosbag_root":"./","topic_suffix":"/bag"}
     rosbag_root=parameters["rosbag_root"]
     #转化成为绝对路径
     rosbag_root=os.path.abspath(rosbag_root)
@@ -27,11 +29,20 @@ def generate_launch_description():
     #启动rosbag2播放器,开启循环模式
     #重定向
     topic_names_remap=[f"{topic_name}:={topic_name}{parameters['topic_suffix']}" for topic_name in topic_names]
+    # topic_names_list=[f"{topic_name}{parameters['topic_suffix']}" for topic_name in topic_names]
     print(f"topic_names_remap: {topic_names_remap}")
     rosbag_node_exe=ExecuteProcess(cmd=["ros2","bag","play",db_file_path,"--topics"]+topic_names
                                    +["--remap"]+topic_names_remap
                                    ,output="screen")
+    rosbag_listener=Node(package="utils",
+        executable="rosbag_listener_node",
+        name="rosbag_listener_node",
+        parameters=[{"topic_names":topic_names},{"topic_types":topic_types},{"topic_suffix":parameters["topic_suffix"]}],
+        output="screen",
+        emulate_tty=True
+    )
     ld.add_action(rosbag_node_exe)
+    ld.add_action(rosbag_listener)
     return ld
 
 def getPlayYamlData(yaml_file_path:str):
