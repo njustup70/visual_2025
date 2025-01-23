@@ -1,3 +1,13 @@
+/**
+ * @file rosbag_player.cpp
+ * @author Elaina (1463967532@qq.com)
+ * @brief rosbag播放节点,读取ros2 bag文件并发布,可以选择同步或异步发布
+ * @version 0.1
+ * @date 2025-01-23
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
 #include "fmt/core.h"
 #include "yaml.h"
 #include <csignal>
@@ -71,6 +81,11 @@ public:
     }
 
 private:
+    /**
+     * @brief 读取yaml文件,获取话题名称与类型
+     *
+     * @param yaml_file_path
+     */
     void getPlayYamlData(std::string yaml_file_path)
     {
         // auto yaml_file = _rosbag_root + "metadata.yaml";
@@ -191,6 +206,10 @@ private:
         //  }
         return sleep_time;
     }
+    /**
+     * @brief 异步发送,通过future来控制
+     *
+     */
     void playBagAsync()
     {
         while (rclcpp::ok())
@@ -209,6 +228,7 @@ private:
                     // fmt::print("time {} topic {}\n", _topic_sleep_time[topic_name].nanoseconds(), topic_name);
                     if (_topic_futures[topic_name]->valid())
                     {
+                        // 同一个话题的future还在运行,等待
                         _topic_futures[topic_name]->wait();
                         // fmt::print("waitedtime: {} topic {}\n", std::chrono::high_resolution_clock::now().time_since_epoch().count(), topic_name);
                     }

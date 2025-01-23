@@ -1,3 +1,13 @@
+/**
+ * @file rosbag_listener.cpp
+ * @author Elaina (1463967532@qq.com)
+ * @brief 这是ros2 bag辅助节点,接受ros2 bag原始消息并打上当前时间戳后发布
+ * @version 0.1
+ * @date 2025-01-23
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
 #include <fmt/core.h>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/serialization.hpp>
@@ -33,6 +43,9 @@ public:
             auto topic_name = topic_name_type.first;
             auto topic_type = topic_name_type.second;
             auto topic_suffix = this->get_parameter("topic_suffix").as_string();
+            // 通过话题名称与类型动态创建发布者与订阅者
+            // 发布者是ros2包原始话题名
+            // 订阅者是ros2包原始话题名+后缀(ros2bag重命名的话题)
             _topic_publish_map[topic_name] = this->create_generic_publisher(topic_name, topic_type, 10);
             _topic_subscribe_map[topic_name + topic_suffix] =
                 this->create_generic_subscription(topic_name + topic_suffix, topic_type, 10, [this, topic_name](std::shared_ptr<rclcpp::SerializedMessage> message)
@@ -44,6 +57,12 @@ public:
     }
 
 private:
+    /**
+     * @brief 收到原始消息后的回调函数
+     *
+     * @param message
+     * @param topic_name
+     */
     void callback(std::shared_ptr<rclcpp::SerializedMessage> message, std::string topic_name)
     {
         auto now_time = this->now();
@@ -87,8 +106,8 @@ private:
             _topic_publish_map[topic_name]->publish(serialized_msg);
         }
     }
-    std::unordered_map<std::string, std::string> _topic_name_type_map;
-    std::unordered_map<std::string, rclcpp::GenericPublisher::SharedPtr> _topic_publish_map;
-    std::unordered_map<std::string, rclcpp::SubscriptionBase::SharedPtr> _topic_subscribe_map;
+    std::unordered_map<std::string, std::string> _topic_name_type_map;                         // 话题名称与类型映射
+    std::unordered_map<std::string, rclcpp::GenericPublisher::SharedPtr> _topic_publish_map;   // 话题名称与发布者映射
+    std::unordered_map<std::string, rclcpp::SubscriptionBase::SharedPtr> _topic_subscribe_map; // 话题名称与订阅者映射
 };
 RCLCPP_COMPONENTS_REGISTER_NODE(RosbagListener)
