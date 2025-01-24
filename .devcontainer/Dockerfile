@@ -5,7 +5,8 @@ ARG USERNAME=Elaina
 WORKDIR /home/$USERNAME
 
 RUN apt-get update && apt-get install -y ros-humble-slam-toolbox ros-humble-pointcloud-to-laserscan ros-humble-foxglove-bridge iputils-ping
-RUN  echo "source ~/location/install/setup.bash" >> /home/$USERNAME/.bashrc \
+RUN echo "source /opt/ros/humble/setup.bash" >> /home/$USERNAME/.bashrc \
+    && echo "source ~/location/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "bass source ~/location/install/setup.bash" >> /home/$USERNAME/.config/fish/config.fish 
 
 CMD ["/bin/bash"]
