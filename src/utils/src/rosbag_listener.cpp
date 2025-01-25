@@ -23,6 +23,7 @@ public:
         this->declare_parameter("topic_names", std::vector<std::string>());
         this->declare_parameter("topic_types", std::vector<std::string>());
         this->declare_parameter("topic_suffix", "/bag");
+        this->declare_parameter("exclude_tf_frames", std::vector<std::string>());
         auto topic_names = this->get_parameter("topic_names").as_string_array();
         auto topic_types = this->get_parameter("topic_types").as_string_array();
         // auto topic_suffix = this->get_parameter("topic_suffix").as_string();
@@ -96,6 +97,10 @@ private:
             auto tf_msg = std::make_shared<tf2_msgs::msg::TFMessage>();
             rclcpp::Serialization<tf2_msgs::msg::TFMessage> serialization;
             serialization.deserialize_message(message.get(), tf_msg.get());
+            auto exclude_tf_frames = get_parameter("exclude_tf_frames").as_string_array();
+            tf_msg->transforms.erase(std::remove_if(tf_msg->transforms.begin(), tf_msg->transforms.end(), [exclude_tf_frames](auto &transform)
+                                                    { return std::find(exclude_tf_frames.begin(), exclude_tf_frames.end(), transform.child_frame_id) != exclude_tf_frames.end(); }),
+                                     tf_msg->transforms.end());
             for (auto &transform : tf_msg->transforms)
             {
                 transform.header.stamp = now_time;

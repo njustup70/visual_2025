@@ -22,6 +22,9 @@ parameters={
     "rosbag_root":"./",
     "topic_suffix":"/bag"}
 def generate_launch_description():
+    ld=LaunchDescription()
+    ld.add_action(DeclareLaunchArgument("exclude_tf_frames",default_value=["odom"],description="exclude tf frames"))
+
     rosbag_root=parameters["rosbag_root"]
     #转化成为绝对路径
     rosbag_root=os.path.abspath(rosbag_root)
@@ -34,7 +37,7 @@ def generate_launch_description():
     else:
         raise ValueError("No .db3 file found in the specified directory.")
     getPlayYamlData(yaml_file_path)
-    ld=LaunchDescription()
+   
     #启动rosbag2播放器,开启循环模式
     #重定向
     topic_names_remap=[f"{topic_name}:={topic_name}{parameters['topic_suffix']}" for topic_name in topic_names]
@@ -48,7 +51,11 @@ def generate_launch_description():
     rosbag_listener=Node(package="utils",
         executable="rosbag_listener_node",
         name="rosbag_listener_node",
-        parameters=[{"topic_names":topic_names},{"topic_types":topic_types},{"topic_suffix":parameters["topic_suffix"]}],
+        parameters=[{"topic_names":topic_names},{"topic_types":topic_types},
+                    {"topic_suffix":parameters["topic_suffix"]},
+                    # LaunchConfiguration("exclude_tf_frames")],
+                    {"exclude_tf_frames":LaunchConfiguration("exclude_tf_frames")}],
+                    # {"exclude_tf_frames":["odom"]}],
         output="screen",
         emulate_tty=True
     )
