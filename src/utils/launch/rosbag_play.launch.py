@@ -23,7 +23,7 @@ parameters={
     "topic_suffix":"/bag"}
 def generate_launch_description():
     ld=LaunchDescription()
-    ld.add_action(DeclareLaunchArgument("exclude_tf_frames",default_value="['odom']",description="exclude tf frames"))
+    ld.add_action(DeclareLaunchArgument("exclude_tf_frames",default_value="",description="exclude tf frames"))
 
     rosbag_root=parameters["rosbag_root"]
     #转化成为绝对路径
