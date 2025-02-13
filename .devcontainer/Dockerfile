@@ -4,13 +4,13 @@ FROM elainasuki/ros:ros2-humble-full-v3
 ARG USERNAME=Elaina
 WORKDIR /home/$USERNAME
 
-RUN apt-get update && apt-get install -y ros-humble-robot-location ros-humble-slam-toolbox ros-humble-pointcloud-to-laserscan
+RUN apt-get update && apt-get install -y ros-humble-robot-localization ros-humble-slam-toolbox ros-humble-pointcloud-to-laserscan
 
 COPY packages/linefit_ground_segementation /home/$USERNAME/packages/ros_ws/src/linefit_ground_segementation
 RUN cd /home/$USERNAME/packages/ros_ws \
     && . /opt/ros/humble/setup.sh \
     && colcon build --symlink-install
-
+    # && bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"
 RUN echo "source /opt/ros/humble/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "source ~/location/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "source ~/packages/ros_ws/install/setup.bash" >> /home/$USERNAME/.bashrc \
