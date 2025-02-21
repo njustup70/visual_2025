@@ -19,10 +19,10 @@ RUN  sudo add-apt-repository ppa:borglab/gtsam-release-4.1 && sudo apt install -
     && colcon build --symlink-install
 USER root
 RUN echo "source /opt/ros/humble/setup.bash" >> /home/$USERNAME/.bashrc \
-    && echo "source ~/location/install/setup.bash" >> /home/$USERNAME/.bashrc \
+    && echo "source ~/visual/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "source ~/packages/ros_ws/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "bass source ~/packages/ros_ws/install/setup.bash" >> /home/$USERNAME/.config/fish/config.fish \
-    && echo "bass source ~/location/install/setup.bash" >> /home/$USERNAME/.config/fish/config.fish 
+    && echo "bass source ~/visual/install/setup.bash" >> /home/$USERNAME/.config/fish/config.fish 
 
 CMD ["/bin/bash"]
 
