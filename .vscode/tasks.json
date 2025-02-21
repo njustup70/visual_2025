@@ -43,7 +43,7 @@
             "args": [
                 "-i",
                 "-c",
-                "colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=${input:BuildType} -DCMAKE_EXPORT_COMPILE_COMMANDS=1"
+                "colcon build --symlink-install --cmake-args -GNinja -DCMAKE_BUILD_TYPE=${input:BuildType} -DCMAKE_EXPORT_COMPILE_COMMANDS=1"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -169,7 +169,7 @@
             "args": [
                 "-i",
                 "-c",
-                "colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=${input:BuildType} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 --packages-select ${input:build_package}"
+                "colcon build --symlink-install --cmake-args -GNinja -DCMAKE_BUILD_TYPE=${input:BuildType} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 --packages-select ${input:build_package}"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -190,7 +190,7 @@
             "args": [
                 "-i",
                 "-c",
-                "colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=${input:BuildType} -DCMAKE_EXPORT_COMPILE_COMMANDS=1"
+                "colcon build --symlink-install --cmake-args -GNinja -DCMAKE_BUILD_TYPE=${input:BuildType} -DCMAKE_EXPORT_COMPILE_COMMANDS=1"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -212,7 +212,7 @@
             "args": [
                 "-i",
                 "-c",
-                "colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=${input:BuildType} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 --packages-select ${input:build_package}"
+                "colcon build --symlink-install --cmake-args -GNinja -DCMAKE_BUILD_TYPE=${input:BuildType} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 --packages-select ${input:build_package}"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
