@@ -1,8 +1,8 @@
 {
-    "name": "location-container",
+    "name": "visual-container",
     "dockerComposeFile": "docker-compose.yml",
-    "service": "location-service",
-    "workspaceFolder": "/home/Elaina/location",
+    "service": "visual-service",
+    "workspaceFolder": "/home/Elaina/visual",
     "shutdownAction": "stopCompose",
     "customizations": {
         "vscode": {
