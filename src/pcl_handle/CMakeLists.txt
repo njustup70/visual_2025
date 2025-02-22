@@ -28,7 +28,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_link_options(
 
     -Wl,--threads=16 # 并行链接线程数
-    -Wl,--lto=thin # 启用 ThinLTO 优化
+
+    # -Wl,--lto=thin # 启用 ThinLTO 优化
   )
 endif()
 

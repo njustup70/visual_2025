@@ -137,6 +137,7 @@
             "type": "shell",
             "label": "RunLLDBDBServer",
             "command": "/bin/bash",
+            "isBackground": true,
             "args": [
                 "${workspaceFolder}/.vscode/run_lldb.sh",
                 "${input:run_package}",
@@ -160,7 +161,24 @@
                 "panel": "shared",
                 "showReuseMessage": true,
                 "clear": false
-            }
+            },
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": ".",
+                        "endsPattern": ".",
+                    }
+                }
+            ]
         },
         {
             "type": "shell",
