@@ -6,14 +6,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_definitions(-std=c++17 -O3)
 
 find_package(ament_cmake_auto REQUIRED)
-find_package(PCL 1.13.1 REQUIRED)
+find_package(PCL 1.12.1 REQUIRED)
 ament_auto_find_build_dependencies()
 ament_auto_add_library(${PROJECT_NAME} SHARED DIRECTORY src)
 
 ament_auto_package()
 
-#############
+# ############
 # QTCREATOR #
-#############
+# ############
 FILE(GLOB_RECURSE LibFiles "include/*")
 add_custom_target(headers SOURCES ${LibFiles})
