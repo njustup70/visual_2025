@@ -1,1 +1,1 @@
-docker compose --profile build-required build builder
+docker build -t elaina/visual .
