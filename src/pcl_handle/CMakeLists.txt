@@ -35,7 +35,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake_auto REQUIRED)
-find_package(PCL 1.13.1 REQUIRED)
+find_package(PCL 1.12.1 REQUIRED)
 ament_auto_find_build_dependencies()
 set(PclHandle "PclHandle")
 set(PclIcp "PclIcp")
