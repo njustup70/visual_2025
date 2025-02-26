@@ -168,14 +168,19 @@
                         {
                             "regexp": ".",
                             "file": 1,
-                            "location": 2,
-                            "message": 3
+                            "line": 1,
+                            "column": 1,
+                            "message": 1
                         }
                     ],
                     "background": {
                         "activeOnStart": true,
-                        "beginsPattern": ".",
-                        "endsPattern": ".",
+                        "beginsPattern": {
+                            "regexp": "."
+                        },
+                        "endsPattern": {
+                            "regexp": "^.*$"
+                        } // <-- right here
                     }
                 }
             ]
