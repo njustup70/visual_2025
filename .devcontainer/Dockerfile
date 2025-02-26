@@ -19,7 +19,7 @@ RUN  sudo add-apt-repository ppa:borglab/gtsam-release-4.1 && sudo apt install -
     && colcon build --symlink-install
 USER root
 #安装导航依赖
-RUN apt-get update && apt-get install ros-humble-nav2-bringup 
+RUN apt-get install -y ros-humble-nav2-bringup 
 RUN echo "source /opt/ros/humble/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "source ~/visual/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "source ~/packages/ros_ws/install/setup.bash" >> /home/$USERNAME/.bashrc \
