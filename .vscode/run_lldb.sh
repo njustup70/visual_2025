@@ -3,7 +3,7 @@
 run_option=$*
 
 source ./install/setup.bash
-ros2 run --prefix 'lldb-server-14 platform --server --listen *:3039' $run_option
+ros2 run --prefix 'lldb-server-19 platform --server --listen *:3039' $run_option
 # if [ -f /usr/bin/gnome-terminal ]
 # then
 #     gnome-terminal --command "ros2 run --prefix 'lldb-server platform --server --listen *:3039' $run_option"
