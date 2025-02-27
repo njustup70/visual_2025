@@ -43,9 +43,15 @@
       "initCommands": [
         "platform select remote-linux",
         "platform connect connect://127.0.0.1:3039",
-        "settings set target.inherit-env false"
+        "settings set target.inherit-env false",
+        "settings set target.skip-prologue true",
+        // "settings set target.inline-breakpoint-strategy always",
+        // "set set stop-disassembly-display always",
+        // "set set stop-line-count-before 0",
+        // "set set stop-line-count-after 0"
       ],
-      "preLaunchTask": "RunLLDBDBServer"
+      "preLaunchTask": "RunLLDBDBServer",
+      "reverseDebugging": true
     },
     {
       "name": "ROS2:Launch启动",

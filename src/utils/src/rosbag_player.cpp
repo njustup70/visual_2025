@@ -37,6 +37,7 @@ public:
     {
         this->declare_parameter("rosbag_root", "./");
         this->declare_parameter("use_async", false);
+        this->declare_parameter("exclude_tf_frames", std::vector<std::string>());
         this->get_parameter("rosbag_root", _rosbag_root);
 
         // 查找当前目录下带.db3后缀的文件
@@ -182,6 +183,10 @@ private:
             serialization.deserialize_message(&serialized_msg, tf_msg.get());
             // 赋值任意一个
             sleep_time = tf_msg->transforms[0].header.stamp;
+            auto exclude_tf_frames = get_parameter("exclude_tf_frames").as_string_array();
+            tf_msg->transforms.erase(std::remove_if(tf_msg->transforms.begin(), tf_msg->transforms.end(), [exclude_tf_frames](auto &transform)
+                                                    { return std::find(exclude_tf_frames.begin(), exclude_tf_frames.end(), transform.child_frame_id) != exclude_tf_frames.end(); }),
+                                     tf_msg->transforms.end());
             for (auto &tf : tf_msg->transforms)
             {
                 tf.header.stamp = ros_time;
