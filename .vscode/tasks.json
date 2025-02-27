@@ -137,7 +137,6 @@
             "type": "shell",
             "label": "RunLLDBDBServer",
             "command": "/bin/bash",
-            "isBackground": true,
             "args": [
                 "${workspaceFolder}/.vscode/run_lldb.sh",
                 "${input:run_package}",
@@ -152,6 +151,7 @@
                 "isDefault": false,
             },
             "hide": true,
+            "isBackground": true,
             "detail": "用于调试运行ROS2节点",
             "dependsOn": "CreateProgramQuickShot",
             "presentation": {
@@ -168,14 +168,19 @@
                         {
                             "regexp": ".",
                             "file": 1,
-                            "location": 2,
-                            "message": 3
+                            "line": 1,
+                            "column": 1,
+                            "message": 1
                         }
                     ],
                     "background": {
                         "activeOnStart": true,
-                        "beginsPattern": ".",
-                        "endsPattern": ".",
+                        "beginsPattern": {
+                            "regexp": "."
+                        },
+                        "endsPattern": {
+                            "regexp": "^.*$"
+                        } // <-- right here
                     }
                 }
             ]

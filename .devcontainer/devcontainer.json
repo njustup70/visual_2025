@@ -16,7 +16,9 @@
                 "ms-vscode.cpptools",
                 "ms-python.python",
                 "ms-iot.vscode-ros",
-                "njpwerner.autodocstring"
+                "njpwerner.autodocstring",
+                "vadimcn.vscode-lldb",
+                "llvm-vs-code-extensions.lldb-dap"
             ]
         },
         "jetbrains": {
