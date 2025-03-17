@@ -8,12 +8,10 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <yaml-cpp/yaml.h>
 
-using std::placeholders::_1;
-
-class ImuTransformNode : public rclcpp::Node
+class ImuTransform : public rclcpp::Node
 {
 public:
-    ImuTransformNode(const rclcpp::NodeOptions &options)
+    ImuTransform(const rclcpp::NodeOptions &options)
         : Node("imu_transform_node", options)
     {
         RCLCPP_INFO(this->get_logger(), "IMU 转换节点已启动");
@@ -31,7 +29,8 @@ public:
         lidar_frame_ = this->get_parameter("lidar_frame").as_string();
         // 订阅 IMU 话题
         imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-            imu_topic_, 10, std::bind(&ImuTransformNode::imuCallback, this, _1));
+            imu_topic_, 10, [this](const sensor_msgs::msg::Imu::SharedPtr msg)
+            { imuCallback(msg); });
 
         // 发布转换后的 IMU 话题
         imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>(imu_transformed_topic_, 10);
@@ -157,4 +156,4 @@ private:
 //     rclcpp::shutdown();
 //     return 0;
 // }
-RCLCPP_COMPONENTS_REGISTER_NODE(ImuTransformNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(ImuTransform)
