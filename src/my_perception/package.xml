@@ -6,7 +6,12 @@
   <description>TODO: Package description</description>
   <maintainer email="1463967532@qq.com">Elaina</maintainer>
   <license>TODO: License declaration</license>
-
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>Eigen3</depend>
+  <depend>tf2_ros</depend>
+  <depend>rclcpp_components</depend>
+  <depend>yaml-cpp</depend>
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <test_depend>ament_lint_auto</test_depend>
