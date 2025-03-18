@@ -1,6 +1,9 @@
 import rclpy
 from rclpy.node import Node
 import numpy as np
+import matplotlib
+# 设置无GUI的后端
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sensor_msgs.msg import Imu
 from scipy.fft import fft, fftfreq
@@ -8,36 +11,36 @@ import os
 from datetime import datetime
 import csv
 
+# 配置中文字体（需要系统安装中文字体）
+plt.rcParams['font.sans-serif'] = ['SimHei']  # Windows系统常用中文字体
+plt.rcParams['axes.unicode_minus'] = False
+
 class ImuNoiseAnalyzer(Node):
     def __init__(self):
         super().__init__('imu_noise_analyzer')
-        self.get_logger().info("IMU 噪声分析节点已启动 - 400Hz 版本")
+        self.get_logger().info("IMU噪声分析节点已启动 - 400Hz版本")
 
         # 参数配置
         self.declare_parameter('imu_topic', '/imu')
-        self.declare_parameter('sample_count', 120000)  # 采集 120000 条数据 (约 5 分钟 @ 400Hz)
-        
+        self.declare_parameter('sample_count', 120000)  # 约5分钟数据
+        print("需要采集的数据量: ", self.get_parameter('sample_count').value)
+        print("IMU话题: ", self.get_parameter('imu_topic').value)
         self.imu_topic = self.get_parameter('imu_topic').value
         self.sample_count = self.get_parameter('sample_count').value
         self.imu_sub = self.create_subscription(Imu, self.imu_topic, self.imu_callback, 10)
         
         # 数据存储
-        self.acc_data = []  # 加速度数据 (m/s²)
-        self.gyro_data = []  # 角速度数据 (rad/s)
-        self.fs = 400  # 采样频率
+        self.acc_data = []
+        self.gyro_data = []
+        self.fs = 400
 
         # 结果保存路径
-        # self.save_dir = os.path.join(os.path.expanduser('~'), 'imu_noise_analysis')
-        #路径为同一个功能包的result文件夹下
         self.save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../src/python_pkg/result')
         self.save_dir = os.path.abspath(self.save_dir)
-        print("存放路径为{}".format(self.save_dir))
         os.makedirs(self.save_dir, exist_ok=True)
-        
-        self.get_logger().info(f"正在采集静态数据，目标条数: {self.sample_count} ...")
+        self.get_logger().info(f"数据保存路径: {self.save_dir}")
 
-    def imu_callback(self, msg):
-        # 存储原始数据
+    def imu_callback(self, msg: Imu):
         acc = [msg.linear_acceleration.x, 
                msg.linear_acceleration.y,
                msg.linear_acceleration.z]
@@ -49,7 +52,6 @@ class ImuNoiseAnalyzer(Node):
         self.acc_data.append(acc)
         self.gyro_data.append(gyro)
 
-        # 检查采集数量
         if len(self.acc_data) >= self.sample_count:
             self.get_logger().info("数据采集完成，开始分析...")
             self.analyze_all()
@@ -60,7 +62,7 @@ class ImuNoiseAnalyzer(Node):
         acc_array = np.array(self.acc_data)
         gyro_array = np.array(self.gyro_data)
         
-        # 基本统计特征
+        # 基本统计分析
         self.analyze_basic_stats(acc_array, gyro_array)
         
         # 频域分析
@@ -70,82 +72,99 @@ class ImuNoiseAnalyzer(Node):
         self.analyze_allan_variance(acc_array, gyro_array)
 
     def analyze_basic_stats(self, acc, gyro):
-        # 移除重力影响 (假设Z轴向上)
-        acc[:, 2] -= 9.81  # 减去重力加速度
-        
+        stats = []
         for i, axis in enumerate(['X', 'Y', 'Z']):
-            # 加速度分析
+            # 加速度统计
             acc_mean = np.mean(acc[:, i])
             acc_std = np.std(acc[:, i])
             
-            # 角速度分析
+            # 角速度统计
             gyro_mean = np.mean(gyro[:, i])
             gyro_std = np.std(gyro[:, i])
             
-            self.get_logger().info(f"\n{axis}轴分析结果:")
-            self.get_logger().info(f"加速度零偏: {acc_mean:.6f} m/s², 标准差: {acc_std:.6f} m/s²")
-            self.get_logger().info(f"角速度零偏: {gyro_mean:.6f} rad/s, 标准差: {gyro_std:.6f} rad/s")
+            stats.append(f"{axis}轴加速度 - 均值: {acc_mean:.6f} m/s², 标准差: {acc_std:.6f} m/s²")
+            stats.append(f"{axis}轴角速度 - 均值: {gyro_mean:.6f} rad/s, 标准差: {gyro_std:.6f} rad/s")
+        
+        # 保存统计结果
+        with open(os.path.join(self.save_dir, 'statistics.txt'), 'w') as f:
+            f.write("\n".join(stats))
+        
+        self.get_logger().info("\n基本统计结果:\n" + "\n".join(stats))
 
     def analyze_frequency_domain(self, acc, gyro):
-        # 分析加速度计X轴和陀螺仪Z轴
-        plt.figure(figsize=(12, 8))
+        fig = plt.figure(figsize=(14, 10))
         
-        # 加速度计频谱
-        self.plot_fft(acc[:, 0], "加速度 X 轴", subplot=211)
-        
-        # 陀螺仪频谱
-        self.plot_fft(gyro[:, 2], "角速度 Z 轴", subplot=212)
+        # 加速度计频谱分析
+        for i, axis in enumerate(['X', 'Y', 'Z']):
+            plt.subplot(3, 2, i*2+1)
+            self.plot_fft(acc[:, i], f"Acceleration {axis}-axis Spectrum")
+            
+        # 陀螺仪频谱分析    
+        for i, axis in enumerate(['X', 'Y', 'Z']):
+            plt.subplot(3, 2, i*2+2)
+            self.plot_fft(gyro[:, i], f"Angular Velocity {axis}-axis Spectrum")
         
         plt.tight_layout()
-        plt.savefig(os.path.join(self.save_dir, 'frequency_analysis.png'))
-        plt.close()
+        plt.savefig(os.path.join(self.save_dir, 'frequency_analysis.png'), dpi=150)
+        plt.close(fig)
 
-    def plot_fft(self, data, title, subplot=None):
+    def plot_fft(self, data, title):
         N = len(data)
-        freqs = fftfreq(N, 1 / self.fs)[:N//2]
-        fft_values = np.abs(fft(data))[:N//2] * 2 / N
+        freqs = fftfreq(N, 1/self.fs)[:N//2]
+        fft_val = np.abs(fft(data))[:N//2] * 2/N
         
-        if subplot:
-            plt.subplot(subplot)
-            
-        plt.semilogy(freqs, fft_values)
-        plt.xlabel('频率 (Hz)')
-        plt.ylabel('幅值')
+        plt.semilogy(freqs, fft_val)
         plt.title(title)
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Amplitude')
         plt.grid(True)
-        plt.xlim(0, self.fs/2)
+        plt.xlim(0, self.fs//2)
 
     def analyze_allan_variance(self, acc, gyro):
-        tau, acc_adev = self.allan_deviation(acc[:, 0], self.fs)
-        _, gyro_adev = self.allan_deviation(gyro[:, 2], self.fs)
+        fig, ax = plt.subplots(2, 1, figsize=(12, 10))
         
-        plt.figure(figsize=(10, 6))
-        plt.loglog(tau, acc_adev, label='加速度 X轴')
-        plt.loglog(tau, gyro_adev, label='角速度 Z轴')
-        plt.xlabel('积分时间 τ (s)')
-        plt.ylabel('Allan 偏差')
-        plt.title('Allan方差分析')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(os.path.join(self.save_dir, 'allan_variance.png'))
-        plt.close()
+        # 加速度计Allan方差
+        for i, axis in enumerate(['X', 'Y', 'Z']):
+            tau, adev = self.allan_deviation(acc[:, i], self.fs)
+            ax[0].loglog(tau, adev, label=f'{axis}-axis')
+        
+        # 陀螺仪Allan方差
+        for i, axis in enumerate(['X', 'Y', 'Z']):
+            tau, adev = self.allan_deviation(gyro[:, i], self.fs)
+            ax[1].loglog(tau, adev, label=f'{axis}-axis')
+        
+        ax[0].set_title('Accelerometer Allan Variance Analysis')
+        ax[0].set_ylabel('ADEV (m/s²)')
+        ax[1].set_title('Gyroscope Allan Variance Analysis')
+        ax[1].set_ylabel('ADEV (rad/s)')
+        
+        for a in ax:
+            a.set_xlabel('Integration Time τ (s)')
+            a.legend()
+            a.grid(True)
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.save_dir, 'allan_variance.png'), dpi=150)
+        plt.close(fig)
 
     def allan_deviation(self, data, fs):
-        max_tau = len(data) // (10 * fs)  # 最大积分时间10秒
+        n = len(data)
+        max_tau = n // (10 * fs)  # 最大积分时间10秒
         tau = np.logspace(-2, np.log10(max_tau), 100)
         
         adev = []
         for t in tau:
-            n = int(t * fs)
-            if n == 0:
+            m = int(t * fs)
+            if m < 1:
                 continue
                 
-            # 分段计算方差
-            m = len(data) // n
-            sigma2 = np.var([np.mean(data[i*n:(i+1)*n]) for i in range(m)])
-            adev.append(np.sqrt(sigma2))
-            
-        return tau[:len(adev)], np.array(adev)
+            num_groups = n // m
+            groups = data[:num_groups*m].reshape(-1, m)
+            means = groups.mean(axis=1)
+            adev.append(np.sqrt(0.5 * np.mean(np.diff(means)**2)))
+        
+        valid_tau = tau[:len(adev)]
+        return valid_tau, np.array(adev)
 
     def save_raw_data(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -153,10 +172,10 @@ class ImuNoiseAnalyzer(Node):
         
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['acc_x', 'acc_y', 'acc_z', 'gyro_x', 'gyro_y', 'gyro_z'])
+            writer.writerow(['acc_x','acc_y','acc_z','gyro_x','gyro_y','gyro_z'])
             for a, g in zip(self.acc_data, self.gyro_data):
                 writer.writerow([*a, *g])
-                
+        
         self.get_logger().info(f"原始数据已保存至: {filename}")
 
 def main(args=None):
