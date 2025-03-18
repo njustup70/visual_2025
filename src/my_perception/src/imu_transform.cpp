@@ -23,6 +23,8 @@ public:
         this->declare_parameter("lidar_frame", "lidar_link");
         this->declare_parameter("Calibration_file", yaml_file);
         this->declare_parameter("pub_tf", true);
+        this->declare_parameter("use_transform", true);
+        this->declare_parameter("use_grivaty2m", false);
         imu_topic_ = this->get_parameter("imu_topic").as_string();
         imu_transformed_topic_ = this->get_parameter("imu_transformed_topic").as_string();
         imu_frame_ = this->get_parameter("imu_frame").as_string();
@@ -47,7 +49,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_broadcaster_;
-
+    const double _gravity = 9.81;
     std::string imu_topic_, imu_transformed_topic_, imu_frame_, lidar_frame_;
     Eigen::Matrix4d imu_to_lidar_;
 
@@ -103,24 +105,32 @@ private:
     void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
     {
         sensor_msgs::msg::Imu transformed_msg = *msg;
+        if (get_parameter("use_grivaty2m").as_bool())
+        {
+            transformed_msg.linear_acceleration.z *= _gravity;
+            transformed_msg.linear_acceleration.x *= _gravity;
+            transformed_msg.linear_acceleration.y *= _gravity;
+        }
+        if (get_parameter("use_transform").as_bool())
+        {
+            Eigen::Vector3d acc(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
+            Eigen::Vector3d acc_transformed = imu_to_lidar_.block<3, 3>(0, 0) * acc;
+            transformed_msg.linear_acceleration.x = acc_transformed.x();
+            transformed_msg.linear_acceleration.y = acc_transformed.y();
+            transformed_msg.linear_acceleration.z = acc_transformed.z();
 
+            // 旋转 IMU 角速度数据
+            Eigen::Vector3d gyro(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
+            Eigen::Vector3d gyro_transformed = imu_to_lidar_.block<3, 3>(0, 0) * gyro;
+            transformed_msg.angular_velocity.x = gyro_transformed.x();
+            transformed_msg.angular_velocity.y = gyro_transformed.y();
+            transformed_msg.angular_velocity.z = gyro_transformed.z();
+        }
         // 旋转 IMU 加速度数据
-        Eigen::Vector3d acc(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
-        Eigen::Vector3d acc_transformed = imu_to_lidar_.block<3, 3>(0, 0) * acc;
-        transformed_msg.linear_acceleration.x = acc_transformed.x();
-        transformed_msg.linear_acceleration.y = acc_transformed.y();
-        transformed_msg.linear_acceleration.z = acc_transformed.z();
-
-        // 旋转 IMU 角速度数据
-        Eigen::Vector3d gyro(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
-        Eigen::Vector3d gyro_transformed = imu_to_lidar_.block<3, 3>(0, 0) * gyro;
-        transformed_msg.angular_velocity.x = gyro_transformed.x();
-        transformed_msg.angular_velocity.y = gyro_transformed.y();
-        transformed_msg.angular_velocity.z = gyro_transformed.z();
 
         // 修改坐标系
         transformed_msg.header.frame_id = lidar_frame_;
-        transformed_msg.header.stamp = this->now();
+        transformed_msg.header.stamp = msg->header.stamp;
 
         imu_pub_->publish(transformed_msg);
     }
