@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             "imu_analysis = python_pkg.imu_analysis:main",
+            "imu_transform = python_pkg.imu_transform:main",
         ],
     },
 )
