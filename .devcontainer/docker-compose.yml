@@ -12,7 +12,7 @@ services:
     volumes:
       # - ${XAUTHORITY}:/root/.Xauthority
       #可以在windows下使用WSL2的X11服务器但是需要在windows环境目录中添加WSL_X11_SOCKET环境变量
-      - ${WSL_X11_SOCKET:-/tmp/.X11-unix}:/tmp/.X11-unix  #如果没有设置WSL_X11_SOCKET则使用默认的/tmp/.X11-unix
+      - ${WSL_X11_SOCKET:-/tmp/.X11-unix}:/tmp/.X11-unix #如果没有设置WSL_X11_SOCKET则使用默认的/tmp/.X11-unix
       - ./..:/home/Elaina/visual
     network_mode: host
     pid: "host"
@@ -21,7 +21,7 @@ services:
     stdin_open: true
     tty: true
     user: "Elaina"
-    runtime: "nvidia"
+    # runtime: "nvidia"
     working_dir: "/home/Elaina/visual"
     # profiles:
     # - build-required
