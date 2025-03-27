@@ -96,6 +96,17 @@ controller_server:
     # DWB parameters
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
+      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+  # 显式设置旋转到目标的权重（默认值可能不足）
+      RotateToGoal:
+        scale: 64.0               # 增大权重（原为 32.0）
+      slowing_factor: 5.0       # 接近目标时减速
+      lookahead_time: -1.0      # 禁用动态前瞻
+      GoalAlign:
+        scale: 32.0               # 目标对齐权重
+        forward_point_distance: 0.1
+      PathAlign:
+        scale: 32.0 
       debug_trajectory_details: True
       min_vel_x: -0.26
       min_vel_y: -0.26
