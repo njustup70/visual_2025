@@ -89,10 +89,10 @@ controller_server:
     # Precise goal checker
     precise_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.1      # 更严格的位置容差
-      yaw_goal_tolerance: 0.05     # 更严格的角度容差
+      xy_goal_tolerance: 0.2      # 更严格的位置容差
+      yaw_goal_tolerance: 0.1     # 更严格的角度容差
       stateful: True
-      use_fixed_heading: True    # 可选：是否强制匹配朝向
+      use_fixed_heading: False    # 可选：是否强制匹配朝向
     # DWB parameters
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
@@ -129,7 +129,7 @@ controller_server:
       vx_samples: 20
       vy_samples: 5
       vtheta_samples: 20
-      sim_time: 2.5
+      sim_time: 2.0
       linear_granularity: 0.05
       angular_granularity: 0.025
       transform_tolerance: 0.2
