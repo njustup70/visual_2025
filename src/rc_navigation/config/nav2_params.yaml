@@ -97,16 +97,22 @@ controller_server:
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-  # 显式设置旋转到目标的权重（默认值可能不足）
-      RotateToGoal:
-        scale: 64.0               # 原 32.0，增大旋转到目标的权重
-        slowing_factor: 3.0       # 接近目标时减速（避免振荡）
-      GoalAlign:
-        scale: 24.0               # 降低目标对齐权重
-      PathAlign:
-        scale: 16.0               # 降低路径对齐权重（避免冲突）
+      
+      # 1. 提高目标距离权重（全速移动）
       GoalDist:
-        scale: 12.0 
+        scale: 64.0                # 原 12.0，大幅提高，优先向目标点移动
+      
+      # 2. 降低路径/朝向对齐权重（避免中途旋转）
+      PathAlign:
+        scale: 8.0                 # 原 16.0，进一步降低
+      GoalAlign:
+        scale: 8.0                 # 原 24.0，进一步降低
+      
+      # 3. 仅在接近目标时旋转
+      RotateToGoal:
+        scale: 96.0                # 原 64.0，确保最终严格旋转
+        lookahead_time: -1.0        # 禁用前瞻，仅当 xy 容差满足时才旋转
+        slowing_factor: 5.0         # 减速更平滑
 
       debug_trajectory_details: True
       min_vel_x: -0.26
