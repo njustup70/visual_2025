@@ -73,7 +73,7 @@ controller_server:
     use_sim_time: True
     controller_frequency: 20.0 # 控制频率(Hz)
     min_x_velocity_threshold: 0.001 # X方向最小速度阈值
-    min_y_velocity_threshold: 0.5 # Y方向最小速度阈值
+    min_y_velocity_threshold: 0.001 # Y方向最小速度阈值
     min_theta_velocity_threshold: 0.001 # 角度最小速度阈值
     failure_tolerance: 0.3 # 控制器失败容忍度
     progress_checker_plugin: "progress_checker" # 进度检查插件
@@ -81,17 +81,17 @@ controller_server:
     controller_plugins: ["FollowPath"] # 此处为DWB局部规划器，启用的控制器插件
 
     # Progress checker parameters 插件参数配置
-    # progress_checker:
-    #   plugin: "nav2_controller::SimpleProgressChecker"
-    #   required_movement_radius: 0.5
-    #   movement_time_allowance: 10.0
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.005
+      movement_time_allowance: 5.0
     # Goal checker parameters
     precise_goal_checker:
      plugin: "nav2_controller::SimpleGoalChecker"
-     xy_goal_tolerance: 0.25
-     yaw_goal_tolerance: 0.25
+     xy_goal_tolerance: 0.05
+     yaw_goal_tolerance: 0.005
      stateful: True
-     use_fixed_heading: True    # 可选：是否强制匹配朝向
+     use_fixed_heading: false    # 可选：是否强制匹配朝向
 
     general_goal_checker: # 目的达到检查插件
       stateful: True
@@ -102,12 +102,13 @@ controller_server:
     FollowPath:  # 控制器插件参数配置
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
+      debug_trajectory_details: True
       min_vel_x: -2.6 # 最小X线速度（后退速度，单位：m/s）
       max_vel_x: 2.6  # 最大X线速度（前进速度，单位：m/s）
       min_vel_y: -2.6 # 最小Y线速度（左移速度，全向轮机器人有效）
       max_vel_y: 2.6  # 最大Y线速度（右移速度，全向轮机器人有效）
       max_vel_theta: 2.6  # 最大角速度（单位：rad/s）
-      min_speed_xy: 0.0   # XY平面最小合成速度（m/s）
+      min_speed_xy: 0.001  # XY平面最小合成速度（m/s）
       max_speed_xy: 5.6  # XY平面最大合成速度（m/s）
       min_speed_theta: 0.0 # 最小旋转速度（rad/s）
       # Add high threshold velocity for turtlebot 3 issue.
@@ -119,14 +120,14 @@ controller_server:
       decel_lim_y: -2.5 # Y方向减速度下限
       decel_lim_theta: -3.2  # 角减速度下限（rad/s²）
       vx_samples: 20 # X线速度采样数量
-      vy_samples: 5  # Y线速度采样数量（差速机器人设为0）
+      vy_samples: 20 # Y线速度采样数量（差速机器人设为0）
       vtheta_samples: 20 # 角速度采样数量
       sim_time: 0.7  # 轨迹预测时长（秒）
       linear_granularity: 0.05  # 线性位移分辨率（米）
       angular_granularity: 0.025 # 角度分辨率（弧度）
-      xy_goal_tolerance: 0.25    # 目标点XY位置容差（米）
-      trans_stopped_velocity: 0.25  # 判定静止的线速度阈值（m/s）
-      transform_tolerance: 0.2   # 坐标变换超时容差（秒）
+      xy_goal_tolerance: 0.1   # 目标点XY位置容差（米）
+      trans_stopped_velocity: 0.01  # 判定静止的线速度阈值（m/s）
+      transform_tolerance: 0.5   # 坐标变换超时容差（秒）
       short_circuit_trajectory_evaluation: True  # 启用轨迹评估短路优化
       stateful: True  # 保持上次规划的最佳轨迹
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
@@ -136,23 +137,24 @@ controller_server:
       PathAlign.forward_point_distance: 0.1  # 前瞻点距离（米）
       GoalAlign.scale: 24.0       # 目标方向对齐权重
       GoalAlign.forward_point_distance: 0.1  
+   
       PathDist.scale: 32.0        # 路径距离评分权重
       GoalDist.scale: 24.0        # 目标距离评分权重
       RotateToGoal.scale: 32.0    # 末端旋转优化权重
-      RotateToGoal.slowing_factor: 5.0  # 减速曲线系数
+      RotateToGoal.slowing_factor: 8.0  # 减速曲线系数
       RotateToGoal.lookahead_time: -1.0 # 动态前瞻时间（-1=自动计算）
 
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0  # 代价地图更新频率(Hz)
-      publish_frequency: 2.0 # 地图数据发布频率(Hz)
+      update_frequency: 10.0  # 代价地图更新频率(Hz)
+      publish_frequency: 10.0 # 地图数据发布频率(Hz)
       global_frame: odom     # 全局坐标系（使用里程计坐标系）
       robot_base_frame: base_link  # 机器人本体坐标系
       use_sim_time: True     # 使用仿真时间
       rolling_window: true   # 启用滚动窗口模式
-      width: 3    # 地图宽度3米
-      height: 3   # 地图高度3米
+      width: 6   # 地图宽度3米
+      height: 6  # 地图高度3米
       resolution: 0.05     # 分辨率5cm/格
       robot_radius: 0.22   # 机器人碰撞半径22cm
       plugins: ["voxel_layer", "inflation_layer"] # 激活的层级
@@ -199,7 +201,7 @@ global_costmap:
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer: # 启用的地图层级，按顺序叠加（静态层 → 障碍层 → 膨胀层）
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True #  启用障碍物层
+        enabled: false #  启用障碍物层
         observation_sources: scan # 障碍物检测的数据源
         scan:
           topic: /laser/sd/raw
