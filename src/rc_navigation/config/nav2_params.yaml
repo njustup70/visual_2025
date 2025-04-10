@@ -91,7 +91,7 @@ controller_server:
      xy_goal_tolerance: 0.05
      yaw_goal_tolerance: 0.005
      stateful: True
-     use_fixed_heading: false    # 可选：是否强制匹配朝向
+     use_fixed_heading: true    # 可选：是否强制匹配朝向
 
     general_goal_checker: # 目的达到检查插件
       stateful: True
