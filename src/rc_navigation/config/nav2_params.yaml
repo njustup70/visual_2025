@@ -201,7 +201,7 @@ global_costmap:
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer: # 启用的地图层级，按顺序叠加（静态层 → 障碍层 → 膨胀层）
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: false #  启用障碍物层
+        enabled: true #  启用障碍物层
         observation_sources: scan # 障碍物检测的数据源
         scan:
           topic: /laser/sd/raw
