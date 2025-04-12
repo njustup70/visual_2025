@@ -103,26 +103,26 @@ controller_server:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
       debug_trajectory_details: True
-      min_vel_x: -2.6 # 最小X线速度（后退速度，单位：m/s）
-      max_vel_x: 2.6  # 最大X线速度（前进速度，单位：m/s）
-      min_vel_y: -2.6 # 最小Y线速度（左移速度，全向轮机器人有效）
-      max_vel_y: 2.6  # 最大Y线速度（右移速度，全向轮机器人有效）
-      max_vel_theta: 2.6  # 最大角速度（单位：rad/s）
+      min_vel_x: -5.0 # 最小X线速度（后退速度，单位：m/s）
+      max_vel_x: 5.0   # 最大X线速度（前进速度，单位：m/s）
+      min_vel_y: -5.0  # 最小Y线速度（左移速度，全向轮机器人有效）
+      max_vel_y: 5.0   # 最大Y线速度（右移速度，全向轮机器人有效）
+      max_vel_theta: 5.0   # 最大角速度（单位：rad/s）
       min_speed_xy: 0.001  # XY平面最小合成速度（m/s）
-      max_speed_xy: 5.6  # XY平面最大合成速度（m/s）
+      max_speed_xy: 8.0  # XY平面最大合成速度（m/s）
       min_speed_theta: 0.0 # 最小旋转速度（rad/s）
       # Add high threshold velocity for turtlebot 3 issue.
       # https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/75
-      acc_lim_x: 2.5    # X方向加速度上限（m/s²）
-      acc_lim_y: 2.5    # Y方向加速度上限（全向轮机器人需调整）
-      acc_lim_theta: 3.2 # 角加速度上限（rad/s²）
-      decel_lim_x: -2.5 # X方向减速度下限（m/s²）
-      decel_lim_y: -2.5 # Y方向减速度下限
+      acc_lim_x: 5.0    # X方向加速度上限（m/s²）
+      acc_lim_y: 5.0   # Y方向加速度上限（全向轮机器人需调整）
+      acc_lim_theta: 5.0 # 角加速度上限（rad/s²）
+      decel_lim_x: -5.0 # X方向减速度下限（m/s²）
+      decel_lim_y: -5.0 # Y方向减速度下限
       decel_lim_theta: -3.2  # 角减速度下限（rad/s²）
-      vx_samples: 20 # X线速度采样数量
-      vy_samples: 20 # Y线速度采样数量（差速机器人设为0）
+      vx_samples: 10 # X线速度采样数量
+      vy_samples: 10 # Y线速度采样数量（差速机器人设为0）
       vtheta_samples: 20 # 角速度采样数量
-      sim_time: 0.5  # 轨迹预测时长（秒）
+      sim_time: 0.7  # 轨迹预测时长（秒）
       linear_granularity: 0.05  # 线性位移分辨率（米）
       angular_granularity: 0.025 # 角度分辨率（弧度）
       xy_goal_tolerance: 0.1   # 目标点XY位置容差（米）
@@ -160,8 +160,8 @@ local_costmap:
       plugins: ["voxel_layer", "inflation_layer"] # 激活的层级
       inflation_layer:   # 膨胀层
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.55  # 膨胀半径(m)
+        cost_scaling_factor: 0.3
+        inflation_radius: 0.10  # 膨胀半径(m)
       voxel_layer:  # 3D体素层
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True # 启用该层
@@ -248,6 +248,31 @@ planner_server:
       use_astar: true # ！！！！是否启动A*算法，若false则启动Dijkstra算法，A*快速响应动态障碍，适合人员流动频繁的区域
       allow_unknown: true # 允许在位置区域通行
 
+# planner_server:
+#   ros__parameters:
+#     expected_planner_frequency: 20.0
+#     use_sim_time: True
+#     planner_plugins: ["SmacHybrid"]  # 使用 Smac 混合A*规划器
+#     SmacHybrid:
+#       plugin: "nav2_smac_planner/SmacPlannerHybrid"
+#       # ==== 核心参数 ====
+#       cache_obstacle_heuristic: True  # 启用障碍物启发式缓存[1,7](@ref)
+#       allow_unknown: True             # 允许在未知区域搜索
+#       motion_model_for_search: "REEDS_SHEPP"  # 运动模型（可选 DUBIN/REEDS_SHEPP）
+#       max_iterations: 1000000         # 最大迭代次数
+#       max_planning_time: 5.0          # 最大规划时间（秒）
+#       analytic_expansion_max_length: 3.0  # 分析扩展的最大路径长度
+#       # ==== 运动学参数 ====
+#       minimum_turning_radius: 0.5      # 最小转弯半径（米）
+#       reverse_penalty: 2.1            # 倒车惩罚系数
+#       change_penalty: 0.15            # 方向变化惩罚系数
+#       non_straight_penalty: 1.1       # 非直线运动惩罚系数
+#       cost_penalty: 2.0               # 代价惩罚系数
+#       # ==== 启发式优化 ====
+#       lookup_table_size: 20.0         # 预计算距离窗口大小（米）[1](@ref)
+#       angle_quantization_bins: 72     # SE2 搜索角度格网数（5度/格）
+
+
 smoother_server:
   ros__parameters:
     use_sim_time: True
@@ -304,10 +329,10 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [2.6, 2.6, 5.0] # 最大速度限制
-    min_velocity: [-2.6, -2.6, -5.0] # 最小速度限制
-    max_accel: [2.5, 2.5, 3.2] # 最大加速度限制
-    max_decel: [-2.5, -2.5, -3.2]
+    max_velocity: [5.0, 5.0, 10.0] # 最大速度限制
+    min_velocity: [-5.0, -5.0, -10.0] # 最小速度限制
+    max_accel: [5.0, 5.0, 10.0] # 最大加速度限制
+    max_decel: [-5.0, -5.0, -10.0]
     odom_topic: "odom"
     odom_duration: 0.1 # 里程计数据的有效期0.1秒
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
