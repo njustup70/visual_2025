@@ -337,3 +337,4 @@ velocity_smoother:
     odom_duration: 0.1 # 里程计数据的有效期0.1秒
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
     velocity_timeout: 1.0
+    
