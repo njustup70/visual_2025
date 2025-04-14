@@ -83,16 +83,15 @@ controller_server:
     # Progress checker parameters 插件参数配置
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.005
+      required_movement_radius: 0.3
       movement_time_allowance: 5.0
     # Goal checker parameters
     precise_goal_checker:
      plugin: "nav2_controller::SimpleGoalChecker"
-     xy_goal_tolerance: 0.05
+     xy_goal_tolerance: 0.5
      yaw_goal_tolerance: 0.005
      stateful: True
      use_fixed_heading: true    # 可选：是否强制匹配朝向
-     ignore_obstacles_on_goal: true  # 新增此参数（若无效，需用方案2）
 
     general_goal_checker: # 目的达到检查插件
       stateful: True
@@ -104,26 +103,26 @@ controller_server:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
       debug_trajectory_details: True
-      min_vel_x: -5.0 # 最小X线速度（后退速度，单位：m/s）
-      max_vel_x: 5.0   # 最大X线速度（前进速度，单位：m/s）
-      min_vel_y: -5.0  # 最小Y线速度（左移速度，全向轮机器人有效）
-      max_vel_y: 5.0   # 最大Y线速度（右移速度，全向轮机器人有效）
-      max_vel_theta: 5.0   # 最大角速度（单位：rad/s）
+      min_vel_x: -3.0 # 最小X线速度（后退速度，单位：m/s）
+      max_vel_x: 3.0   # 最大X线速度（前进速度，单位：m/s）
+      min_vel_y: -3.0  # 最小Y线速度（左移速度，全向轮机器人有效）
+      max_vel_y: 3.0   # 最大Y线速度（右移速度，全向轮机器人有效）
+      max_vel_theta: 2.0   # 最大角速度（单位：rad/s）
       min_speed_xy: 0.001  # XY平面最小合成速度（m/s）
-      max_speed_xy: 8.0  # XY平面最大合成速度（m/s）
+      max_speed_xy: 4.0  # XY平面最大合成速度（m/s）
       min_speed_theta: 0.0 # 最小旋转速度（rad/s）
       # Add high threshold velocity for turtlebot 3 issue.
       # https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/75
-      acc_lim_x: 5.0    # X方向加速度上限（m/s²）
-      acc_lim_y: 5.0   # Y方向加速度上限（全向轮机器人需调整）
-      acc_lim_theta: 5.0 # 角加速度上限（rad/s²）
-      decel_lim_x: -5.0 # X方向减速度下限（m/s²）
-      decel_lim_y: -5.0 # Y方向减速度下限
-      decel_lim_theta: -3.2  # 角减速度下限（rad/s²）
+      acc_lim_x: 2.0    # X方向加速度上限（m/s²）
+      acc_lim_y: 2.0   # Y方向加速度上限（全向轮机器人需调整）
+      acc_lim_theta: 2.0 # 角加速度上限（rad/s²）
+      decel_lim_x: -1.0 # X方向减速度下限（m/s²）
+      decel_lim_y: -1.0   # Y方向减速度下限
+      decel_lim_theta: -1.5  # 角减速度下限（rad/s²）
       vx_samples: 10 # X线速度采样数量
       vy_samples: 10 # Y线速度采样数量（差速机器人设为0）
       vtheta_samples: 20 # 角速度采样数量
-      sim_time: 0.7  # 轨迹预测时长（秒）
+      sim_time: 1.0  # 轨迹预测时长（秒）
       linear_granularity: 0.05  # 线性位移分辨率（米）
       angular_granularity: 0.025 # 角度分辨率（弧度）
       xy_goal_tolerance: 0.1   # 目标点XY位置容差（米）
@@ -133,21 +132,17 @@ controller_server:
       stateful: True  # 保持上次规划的最佳轨迹
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       # 轨迹评分器(Critics)配置
-      BaseObstacle.scale: 0.02    # 避障评分权重（低权重可能不安全）
-      PathAlign.scale: 32.0       # 路径方向对齐权重
+      BaseObstacle.scale: 10.0
+      PathAlign.scale: 15.0          
       PathAlign.forward_point_distance: 0.1  # 前瞻点距离（米）
-      GoalAlign.scale: 24.0       # 目标方向对齐权重
+      GoalAlign.scale: 15.0       # 目标方向对齐权重
       GoalAlign.forward_point_distance: 0.1  
    
-      PathDist.scale: 32.0        # 路径距离评分权重
-      GoalDist.scale: 24.0        # 目标距离评分权重
+      PathDist.scale: 15.0      # 路径距离评分权重
+      GoalDist.scale: 15.0        # 目标距离评分权重
       RotateToGoal.scale: 32.0    # 末端旋转优化权重
-      RotateToGoal.slowing_factor: 8.0  # 减速曲线系数
+      RotateToGoal.slowing_factor: 5.0  # 减速曲线系数
       RotateToGoal.lookahead_time: -1.0 # 动态前瞻时间（-1=自动计算）
-<<<<<<< Updated upstream
-
-=======
-      goal_distance_bias: 2.0
 # local_costmap:
 #   plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]  # 添加 obstacle_layer
 #   obstacle_layer:
@@ -160,12 +155,11 @@ controller_server:
 #       marking: True    # 标记障碍物
 #       clearing: True   # 清除自由区域
 #       obstacle_max_range: 2.5  # 需与传感器实际有效范围匹配
->>>>>>> Stashed changes
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 10.0  # 代价地图更新频率(Hz)
-      publish_frequency: 10.0 # 地图数据发布频率(Hz)
+      update_frequency: 20.0  # 代价地图更新频率(Hz)
+      publish_frequency: 20.0 # 地图数据发布频率(Hz)
       global_frame: odom     # 全局坐标系（使用里程计坐标系）
       robot_base_frame: base_link  # 机器人本体坐标系
       use_sim_time: True     # 使用仿真时间
@@ -174,42 +168,30 @@ local_costmap:
       height: 6  # 地图高度3米
       resolution: 0.05     # 分辨率5cm/格
       robot_radius: 0.22   # 机器人碰撞半径22cm
-      plugins: ["voxel_layer", "inflation_layer"] # 激活的层级
+      plugins: ["obstacle_layer", "inflation_layer"] # 激活的层级
+      
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan  # 确保与传感器话题一致
+        scan:
+          topic: /laser/sd/raw
+          max_obstacle_height: 2.0
+          clearing: True # 清除激光路径上的自由区域 
+          marking: True # 标记激光点云中的障碍物
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 3.0 # 有效障碍物检测最大距离2.5米
+          obstacle_min_range: 0.0
+          persistence: 0.1
+          clear_on_max_distance: True  # 启用超出最大距离的障碍物清除
+
       inflation_layer:   # 膨胀层
         plugin: "nav2_costmap_2d::InflationLayer"
-<<<<<<< Updated upstream
-        cost_scaling_factor: 0.3
-        inflation_radius: 0.10  # 膨胀半径(m)
-      voxel_layer:  # 3D体素层
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True # 启用该层
-        publish_voxel_map: True # 发布3D体素地图
-        origin_z: 0.0      # Z轴原点
-        z_resolution: 0.05 # 垂直分辨率5cm
-        z_voxels: 16  # 垂直方向体素数（16×0.05=0.8米高度）
-        max_obstacle_height: 2.0  # 最大障碍物高度2米
-        mark_threshold: 0  # 体素标记阈值（0表示1个点即标记）
-        observation_sources: scan # 数据源名称
-        scan:
-          topic: /laser/sd/raw # 激光话题
-          max_obstacle_height: 2.0 # 数据类型（实际为2D扫描）
-          clearing: True # 用于标记障碍物
-          marking: True # 用于清除空闲区域
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0 # 光线追踪最大距离3米
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5 # 有效障碍检测最大距离2.5米
-          obstacle_min_range: 0.0
-      static_layer:
-        plugin: "nav2_costmap_2d::StaticLayer"
-        map_subscribe_transient_local: True # 使用临时本地订阅
-=======
         enabled: True
         cost_scaling_factor: 2.0
-        inflation_radius: 0.5       
-        exclude_goal_area: true     # 若支持此参数
-        goal_radius: 0.3 
-
+        inflation_radius: 0.8                          
 
       # voxel_layer:  # 3D体素层
       #   plugin: "nav2_costmap_2d::VoxelLayer"
@@ -237,7 +219,6 @@ local_costmap:
       # static_layer:
       #   plugin: "nav2_costmap_2d::StaticLayer"
       #   map_subscribe_transient_local: false # 使用临时本地订阅
->>>>>>> Stashed changes
       always_send_full_costmap: True # 始终发布完整地图
 
 global_costmap:
@@ -245,27 +226,32 @@ global_costmap:
     ros__parameters:
       update_frequency: 1.0
       publish_frequency: 1.0
+      static_map: true         # 依赖静态地图(新增)
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: True
       robot_radius: 0.22 # 机器人碰撞半径0.22米，用于膨胀层生成避障区域
       resolution: 0.05 # 地图分辨率为5厘米/像素
       track_unknown_space: true # 将未知区域视为可通行区域
-      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
-      obstacle_layer: # 启用的地图层级，按顺序叠加（静态层 → 障碍层 → 膨胀层）
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: true #  启用障碍物层
-        observation_sources: scan # 障碍物检测的数据源
-        scan:
-          topic: /laser/sd/raw
-          max_obstacle_height: 2.0
-          clearing: True # 清除激光路径上的自由区域
-          marking: True # 标记激光点云中的障碍物
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5 # 有效障碍物检测最大距离2.5米
-          obstacle_min_range: 0.0
+      plugins: ["static_layer", "inflation_layer"]
+      
+      # obstacle_layer: # 启用的地图层级，按顺序叠加（静态层 → 障碍层 → 膨胀层）但不需要障碍层似乎
+      #   plugin: "nav2_costmap_2d::ObstacleLayer"
+      #   enabled: true #  启用障碍物层
+      #   observation_sources: scan # 障碍物检测的数据源
+      #   # combination_method: 0        # 覆盖模式，新数据直接替换旧数据
+      #   # observation_persistence: 0.0 # 数据保留时间为0秒
+      #   scan:
+      #     topic: /laser/sd/raw
+      #     max_obstacle_height: 2.0
+      #     clearing: True # 清除激光路径上的自由区域
+      #     marking: True # 标记激光点云中的障碍物
+      #     data_type: "LaserScan"
+      #     raytrace_max_range: 3.0
+      #     raytrace_min_range: 0.0
+      #     obstacle_max_range: 3.0 # 有效障碍物检测最大距离2.5米
+      #     obstacle_min_range: 0.0
+
       static_layer:  # 静态地图层
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -382,12 +368,11 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [5.0, 5.0, 10.0] # 最大速度限制
-    min_velocity: [-5.0, -5.0, -10.0] # 最小速度限制
-    max_accel: [5.0, 5.0, 10.0] # 最大加速度限制
-    max_decel: [-5.0, -5.0, -10.0]
+    max_velocity: [3.0, 3.0, 4.0] # 最大速度限制
+    min_velocity: [-3.0, -3.0, -4.0] # 最小速度限制
+    max_accel: [2.0, 2.0, 2.0] # 最大加速度限制
+    max_decel: [-2.0, -2.0, -2.0]
     odom_topic: "odom"
     odom_duration: 0.1 # 里程计数据的有效期0.1秒
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
     velocity_timeout: 1.0
-    
