@@ -132,14 +132,14 @@ controller_server:
       stateful: True  # 保持上次规划的最佳轨迹
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       # 轨迹评分器(Critics)配置
-      BaseObstacle.scale: 10.0
-      PathAlign.scale: 15.0          
-      PathAlign.forward_point_distance: 0.1  # 前瞻点距离（米）
-      GoalAlign.scale: 15.0       # 目标方向对齐权重
-      GoalAlign.forward_point_distance: 0.1  
+      BaseObstacle.scale: 50.0
+      PathAlign.scale: 10.0          
+      PathAlign.forward_point_distance: 0.5  # 前瞻点距离（米）
+      GoalAlign.scale: 10.0       # 目标方向对齐权重
+      GoalAlign.forward_point_distance: 0.5  
    
-      PathDist.scale: 15.0      # 路径距离评分权重
-      GoalDist.scale: 15.0        # 目标距离评分权重
+      PathDist.scale: 20.0      # 路径距离评分权重
+      GoalDist.scale: 20.0        # 目标距离评分权重
       RotateToGoal.scale: 32.0    # 末端旋转优化权重
       RotateToGoal.slowing_factor: 5.0  # 减速曲线系数
       RotateToGoal.lookahead_time: -1.0 # 动态前瞻时间（-1=自动计算）
