@@ -36,7 +36,7 @@
  *         David V. Lu!!
  *         Steve Macenski
  *********************************************************************/
-#include "nav2_costmap_2d/obstacle_layer.hpp"
+#include <costmap_ultra/obstacle_layer.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -47,7 +47,7 @@
 #include "sensor_msgs/point_cloud2_iterator.hpp"
 #include "nav2_costmap_2d/costmap_math.hpp"
 
-PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::ObstacleLayer, nav2_costmap_2d::Layer)
+PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::ObstacleLayerUltra, nav2_costmap_2d::Layer)
 
 using nav2_costmap_2d::NO_INFORMATION;
 using nav2_costmap_2d::LETHAL_OBSTACLE;
@@ -60,7 +60,7 @@ using rcl_interfaces::msg::ParameterType;
 namespace nav2_costmap_2d
 {
 
-ObstacleLayer::~ObstacleLayer()
+ObstacleLayerUltra::~ObstacleLayerUltra()
 {
   dyn_params_handler_.reset();
   for (auto & notifier : observation_notifiers_) {
@@ -68,7 +68,7 @@ ObstacleLayer::~ObstacleLayer()
   }
 }
 
-void ObstacleLayer::onInitialize()
+void ObstacleLayerUltra::onInitialize()
 {
   bool track_unknown_space;
   double transform_tolerance;
@@ -99,7 +99,7 @@ void ObstacleLayer::onInitialize()
 
   dyn_params_handler_ = node->add_on_set_parameters_callback(
     std::bind(
-      &ObstacleLayer::dynamicParametersCallback,
+      &ObstacleLayerUltra::dynamicParametersCallback,
       this,
       std::placeholders::_1));
 
@@ -115,7 +115,7 @@ void ObstacleLayer::onInitialize()
     default_value_ = FREE_SPACE;
   }
 
-  ObstacleLayer::matchSize();
+  ObstacleLayerUltra::matchSize();
   current_ = true;
   was_reset_ = false;
 
@@ -236,13 +236,13 @@ void ObstacleLayer::onInitialize()
       if (inf_is_valid) {
         filter->registerCallback(
           std::bind(
-            &ObstacleLayer::laserScanValidInfCallback, this, std::placeholders::_1,
+            &ObstacleLayerUltra::laserScanValidInfCallback, this, std::placeholders::_1,
             observation_buffers_.back()));
 
       } else {
         filter->registerCallback(
           std::bind(
-            &ObstacleLayer::laserScanCallback, this, std::placeholders::_1,
+            &ObstacleLayerUltra::laserScanCallback, this, std::placeholders::_1,
             observation_buffers_.back()));
       }
 
@@ -270,7 +270,7 @@ void ObstacleLayer::onInitialize()
 
       filter->registerCallback(
         std::bind(
-          &ObstacleLayer::pointCloud2Callback, this, std::placeholders::_1,
+          &ObstacleLayerUltra::pointCloud2Callback, this, std::placeholders::_1,
           observation_buffers_.back()));
 
       observation_subscribers_.push_back(sub);
@@ -287,7 +287,7 @@ void ObstacleLayer::onInitialize()
 }
 
 rcl_interfaces::msg::SetParametersResult
-ObstacleLayer::dynamicParametersCallback(
+ObstacleLayerUltra::dynamicParametersCallback(
   std::vector<rclcpp::Parameter> parameters)
 {
   std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
@@ -324,7 +324,7 @@ ObstacleLayer::dynamicParametersCallback(
 }
 
 void
-ObstacleLayer::laserScanCallback(
+ObstacleLayerUltra::laserScanCallback(
   sensor_msgs::msg::LaserScan::ConstSharedPtr message,
   const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> & buffer)
 {
@@ -358,7 +358,7 @@ ObstacleLayer::laserScanCallback(
 }
 
 void
-ObstacleLayer::laserScanValidInfCallback(
+ObstacleLayerUltra::laserScanValidInfCallback(
   sensor_msgs::msg::LaserScan::ConstSharedPtr raw_message,
   const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> & buffer)
 {
@@ -401,7 +401,7 @@ ObstacleLayer::laserScanValidInfCallback(
 }
 
 void
-ObstacleLayer::pointCloud2Callback(
+ObstacleLayerUltra::pointCloud2Callback(
   sensor_msgs::msg::PointCloud2::ConstSharedPtr message,
   const std::shared_ptr<ObservationBuffer> & buffer)
 {
@@ -412,10 +412,13 @@ ObstacleLayer::pointCloud2Callback(
 }
 
 void
-ObstacleLayer::updateBounds(
+ObstacleLayerUltra::updateBounds(
   double robot_x, double robot_y, double robot_yaw, double * min_x,
   double * min_y, double * max_x, double * max_y)
 {
+  RCLCPP_INFO(
+    logger_,"costmap_2d::ObstacleLayerUltra::updateBounds: robot_x: %f, robot_y: %f, robot_yaw: %f",
+    robot_x, robot_y, robot_yaw);
   std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
   if (rolling_window_) {
     updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
@@ -507,7 +510,7 @@ ObstacleLayer::updateBounds(
 }
 
 void
-ObstacleLayer::updateFootprint(
+ObstacleLayerUltra::updateFootprint(
   double robot_x, double robot_y, double robot_yaw,
   double * min_x, double * min_y,
   double * max_x,
@@ -522,7 +525,7 @@ ObstacleLayer::updateFootprint(
 }
 
 void
-ObstacleLayer::updateCosts(
+ObstacleLayerUltra::updateCosts(
   nav2_costmap_2d::Costmap2D & master_grid, int min_i, int min_j,
   int max_i,
   int max_j)
@@ -555,7 +558,7 @@ ObstacleLayer::updateCosts(
 }
 
 void
-ObstacleLayer::addStaticObservation(
+ObstacleLayerUltra::addStaticObservation(
   nav2_costmap_2d::Observation & obs,
   bool marking, bool clearing)
 {
@@ -568,7 +571,7 @@ ObstacleLayer::addStaticObservation(
 }
 
 void
-ObstacleLayer::clearStaticObservations(bool marking, bool clearing)
+ObstacleLayerUltra::clearStaticObservations(bool marking, bool clearing)
 {
   if (marking) {
     static_marking_observations_.clear();
@@ -579,7 +582,7 @@ ObstacleLayer::clearStaticObservations(bool marking, bool clearing)
 }
 
 bool
-ObstacleLayer::getMarkingObservations(std::vector<Observation> & marking_observations) const
+ObstacleLayerUltra::getMarkingObservations(std::vector<Observation> & marking_observations) const
 {
   bool current = true;
   // get the marking observations
@@ -596,7 +599,7 @@ ObstacleLayer::getMarkingObservations(std::vector<Observation> & marking_observa
 }
 
 bool
-ObstacleLayer::getClearingObservations(std::vector<Observation> & clearing_observations) const
+ObstacleLayerUltra::getClearingObservations(std::vector<Observation> & clearing_observations) const
 {
   bool current = true;
   // get the clearing observations
@@ -613,7 +616,7 @@ ObstacleLayer::getClearingObservations(std::vector<Observation> & clearing_obser
 }
 
 void
-ObstacleLayer::raytraceFreespace(
+ObstacleLayerUltra::raytraceFreespace(
   const Observation & clearing_observation, double * min_x,
   double * min_y,
   double * max_x,
@@ -704,7 +707,7 @@ ObstacleLayer::raytraceFreespace(
 }
 
 void
-ObstacleLayer::activate()
+ObstacleLayerUltra::activate()
 {
   for (auto & notifier : observation_notifiers_) {
     notifier->clear();
@@ -720,7 +723,7 @@ ObstacleLayer::activate()
 }
 
 void
-ObstacleLayer::deactivate()
+ObstacleLayerUltra::deactivate()
 {
   for (unsigned int i = 0; i < observation_subscribers_.size(); ++i) {
     if (observation_subscribers_[i] != NULL) {
@@ -730,7 +733,7 @@ ObstacleLayer::deactivate()
 }
 
 void
-ObstacleLayer::updateRaytraceBounds(
+ObstacleLayerUltra::updateRaytraceBounds(
   double ox, double oy, double wx, double wy, double max_range, double min_range,
   double * min_x, double * min_y, double * max_x, double * max_y)
 {
@@ -745,7 +748,7 @@ ObstacleLayer::updateRaytraceBounds(
 }
 
 void
-ObstacleLayer::reset()
+ObstacleLayerUltra::reset()
 {
   resetMaps();
   resetBuffersLastUpdated();
@@ -754,7 +757,7 @@ ObstacleLayer::reset()
 }
 
 void
-ObstacleLayer::resetBuffersLastUpdated()
+ObstacleLayerUltra::resetBuffersLastUpdated()
 {
   for (unsigned int i = 0; i < observation_buffers_.size(); ++i) {
     if (observation_buffers_[i]) {

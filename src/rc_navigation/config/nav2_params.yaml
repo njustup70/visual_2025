@@ -211,7 +211,7 @@ local_costmap:
       robot_radius: 0.22   # 机器人碰撞半径22cm
       plugins: ["obstacle_layer", "inflation_layer"] # 激活的层级
       obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
+        plugin: "nav2_costmap_2d::ObstacleLayerUltra"
         enabled: True
         combination_method: 0
         observation_sources: scan # 数据源名称
