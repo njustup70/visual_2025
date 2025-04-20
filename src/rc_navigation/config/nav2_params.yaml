@@ -205,28 +205,32 @@ local_costmap:
       robot_base_frame: base_link  # 机器人本体坐标系
       use_sim_time: True     # 使用仿真时间
       rolling_window: true   # 启用滚动窗口模式
-      width: 6   # 地图宽度3米
-      height: 6  # 地图高度3米
+      width: 7   # 地图宽度3米
+      height: 7  # 地图高度3米
       resolution: 0.05     # 分辨率5cm/格
       robot_radius: 0.22   # 机器人碰撞半径22cm
       plugins: ["obstacle_layer", "inflation_layer"] # 激活的层级
-      
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan  # 确保与传感器话题一致
+        combination_method: 0
+        observation_sources: scan # 数据源名称
+        max_obstacle_intensity: 2.0
+        min_obstacle_intensity: 0.2
         scan:
           topic: /laser/sd/raw
-          max_obstacle_height: 2.0
+          sensor_frame: laser_link # 激光传感器坐标系
           clearing: True # 清除激光路径上的自由区域 
           marking: True # 标记激光点云中的障碍物
           data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 3.0 # 有效障碍物检测最大距离2.5米
-          obstacle_min_range: 0.0
-          persistence: 0.1
-          clear_on_max_distance: True  # 启用超出最大距离的障碍物清除
+          max_obstacle_height: 2.0
+          min_obstacle_height: -2.0
+          obstacle_max_range: 5.0
+          obstacle_min_range: 0.2
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.2
+          clearing: True
+          marking: True
 
       inflation_layer:   # 膨胀层
         plugin: "nav2_costmap_2d::InflationLayer"
@@ -275,7 +279,27 @@ global_costmap:
       resolution: 0.05 # 地图分辨率为5厘米/像素
       track_unknown_space: true # 将未知区域视为可通行区域
       plugins: ["static_layer", "inflation_layer"]
-      
+      obstacle_layer:
+       plugin: "nav2_costmap_2d::ObstacleLayer"
+       enabled: True
+       combination_method: 0
+       observation_sources: scan # 数据源名称
+       max_obstacle_intensity: 2.0
+       min_obstacle_intensity: 0.2
+       scan:
+         topic: /laser/sd/raw
+         sensor_frame: laser_link # 激光传感器坐标系
+         clearing: True # 清除激光路径上的自由区域 
+         marking: True # 标记激光点云中的障碍物
+         data_type: "LaserScan"
+         max_obstacle_height: 2.0
+         min_obstacle_height: -2.0
+         obstacle_max_range: 5.0
+         obstacle_min_range: 0.2
+         raytrace_max_range: 8.0
+         raytrace_min_range: 0.2
+         clearing: True
+         marking: True
       # obstacle_layer: # 启用的地图层级，按顺序叠加（静态层 → 障碍层 → 膨胀层）但不需要障碍层似乎
       #   plugin: "nav2_costmap_2d::ObstacleLayer"
       #   enabled: true #  启用障碍物层
