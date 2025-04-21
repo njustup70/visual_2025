@@ -440,12 +440,18 @@ ObstacleLayerUltra::updateBounds(
 
   // update the global current status
   current_ = current;
-  RCLCPP_INFO(logger_, "current_: %d", current_);
+  // RCLCPP_INFO(logger_, "current_: %d", current_);
   // raytrace freespace
-  for (unsigned int i = 0; i < clearing_observations.size(); ++i) {
-    raytraceFreespace(clearing_observations[i], min_x, min_y, max_x, max_y);
+  // for (unsigned int i = 0; i < clearing_observations.size(); ++i) {
+  //   raytraceFreespace(clearing_observations[i], min_x, min_y, max_x, max_y);
+  // }
+  //直接清除
+  for (unsigned int x = 0; x < getSizeInCellsX(); ++x) {
+    for (unsigned int y = 0; y < getSizeInCellsY(); ++y) {
+      // costmap_.setCost(x, y, FREE_SPACE);
+      costmap_[ getIndex(x, y) ] = FREE_SPACE;
+    }
   }
-
   // place the new obstacles into a priority queue... each with a priority of zero to begin with
   for (std::vector<Observation>::const_iterator it = observations.begin();
     it != observations.end(); ++it)
