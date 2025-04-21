@@ -201,6 +201,7 @@ void ObstacleLayerUltra::onInitialize()
           global_frame_,
           sensor_frame, tf2::durationFromSec(transform_tolerance))));
 
+    // 创建引用,全部指向observation_buffers_
     // check if we'll add this buffer to our marking observation buffers
     if (marking) {
       marking_buffers_.push_back(observation_buffers_.back());
@@ -322,7 +323,7 @@ ObstacleLayerUltra::dynamicParametersCallback(
   result.successful = true;
   return result;
 }
-
+//转化成为点云
 void
 ObstacleLayerUltra::laserScanCallback(
   sensor_msgs::msg::LaserScan::ConstSharedPtr message,
@@ -416,9 +417,9 @@ ObstacleLayerUltra::updateBounds(
   double robot_x, double robot_y, double robot_yaw, double * min_x,
   double * min_y, double * max_x, double * max_y)
 {
-  RCLCPP_INFO(
-    logger_,"costmap_2d::ObstacleLayerUltra::updateBounds: robot_x: %f, robot_y: %f, robot_yaw: %f",
-    robot_x, robot_y, robot_yaw);
+  // RCLCPP_INFO(
+  //   logger_,"costmap_2d::ObstacleLayerUltra::updateBounds: robot_x: %f, robot_y: %f, robot_yaw: %f",
+  //   robot_x, robot_y, robot_yaw);
   std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
   if (rolling_window_) {
     updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
@@ -439,7 +440,7 @@ ObstacleLayerUltra::updateBounds(
 
   // update the global current status
   current_ = current;
-
+  RCLCPP_INFO(logger_, "current_: %d", current_);
   // raytrace freespace
   for (unsigned int i = 0; i < clearing_observations.size(); ++i) {
     raytraceFreespace(clearing_observations[i], min_x, min_y, max_x, max_y);
