@@ -21,6 +21,8 @@ USER root
 #安装导航依赖
 RUN apt-get install -y ros-humble-nav2-bringup 
 RUN echo "source /opt/ros/humble/setup.bash" >> /home/$USERNAME/.bashrc \
+    && echo "export ROS_LOCALHOST_ONLY=1" >> /home/$USERNAME/.bashrc \
+    && echo "export ROS_LOCALHOST_ONLY=1" >> /home/$USERNAME/.config/fish/config.fish \
     && echo "source ~/visual/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "source ~/packages/ros_ws/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "bass source ~/packages/ros_ws/install/setup.bash" >> /home/$USERNAME/.config/fish/config.fish \
