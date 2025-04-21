@@ -1,6 +1,6 @@
 bt_navigator:
   ros__parameters:
-    use_sim_time: True  # 使用Gazebo等仿真器的时间而非系统时间
+    use_sim_time: false  # 使用Gazebo等仿真器的时间而非系统时间
     global_frame: map  # 全局定位使用的地图坐标系
     robot_base_frame: base_link  # 机器人基坐标系
     odom_topic: /odom  # 里程计话题
@@ -62,11 +62,11 @@ bt_navigator:
 
 bt_navigator_navigate_through_poses_rclcpp_node:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: false
 
 bt_navigator_navigate_to_pose_rclcpp_node:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: false
 
 controller_server:
   ros__parameters:
@@ -77,7 +77,7 @@ controller_server:
     min_theta_velocity_threshold: 0.01
     failure_tolerance: 0.3 # The maximum duration in seconds the called controller plugin can fail
     # odom_topic: "state_estimation"
-    global_frame: odom     # 全局坐标系（使用里程计坐标系）
+    global_frame: camera_init     # 全局坐标系（使用里程计坐标系）
     robot_base_frame: base_link  # 机器人本体坐标系
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"] 
@@ -201,9 +201,9 @@ local_costmap:
     ros__parameters:
       update_frequency: 20.0  # 代价地图更新频率(Hz)
       publish_frequency: 20.0 # 地图数据发布频率(Hz)
-      global_frame: odom     # 全局坐标系（使用里程计坐标系）
+      global_frame: camera_init     # 全局坐标系（使用里程计坐标系）
       robot_base_frame: base_link  # 机器人本体坐标系
-      use_sim_time: True     # 使用仿真时间
+      use_sim_time: false     # 使用仿真时间
       rolling_window: true   # 启用滚动窗口模式
       width: 7   # 地图宽度3米
       height: 7  # 地图高度3米
@@ -214,13 +214,12 @@ local_costmap:
         plugin: "nav2_costmap_2d::ObstacleLayerUltra"
         # plugin: "costmap_intensity::ObstacleLayerIntensity"
         enabled: True
-        combination_method: 0
         observation_sources: scan # 数据源名称
         max_obstacle_intensity: 2.0
         min_obstacle_intensity: 0.2
         scan:
-          topic: /laser/sd/raw
-          sensor_frame: laser_link # 激光传感器坐标系
+          topic: /MS200/scan
+          # sensor_frame: laser_frame # 激光传感器坐标系
           clearing: True # 清除激光路径上的自由区域 
           marking: True # 标记激光点云中的障碍物
           data_type: "LaserScan"
@@ -275,7 +274,7 @@ global_costmap:
       static_map: true         # 依赖静态地图(新增)
       global_frame: map
       robot_base_frame: base_link
-      use_sim_time: True
+      use_sim_time: false
       robot_radius: 0.22 # 机器人碰撞半径0.22米，用于膨胀层生成避障区域
       resolution: 0.05 # 地图分辨率为5厘米/像素
       track_unknown_space: true # 将未知区域视为可通行区域
@@ -289,8 +288,8 @@ global_costmap:
         max_obstacle_intensity: 2.0
         min_obstacle_intensity: 0.2
         scan:
-          topic: /laser/sd/raw
-          sensor_frame: laser_link # 激光传感器坐标系
+          topic: /MS200/scan
+          sensor_frame: laser_frame # 激光传感器坐标系
           clearing: True # 清除激光路径上的自由区域 
           marking: True # 标记激光点云中的障碍物
           data_type: "LaserScan"
@@ -330,14 +329,15 @@ global_costmap:
 
 map_server:
   ros__parameters:
-    use_sim_time: True
+    global_frame: map
+    use_sim_time: false
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
     yaml_filename: "" # 地图文件路径，通常通过启动参数传入（如map:=/path/map.yaml
 
 map_saver:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: false
     save_map_timeout: 5.0
     free_thresh_default: 0.25 # 自由区域阈值，概率值小于0.25的栅格视为自由
     occupied_thresh_default: 0.65 # 占据区域阈值，概率值大于0.65的栅格视为障碍
@@ -346,7 +346,7 @@ map_saver:
 planner_server:
   ros__parameters:
     expected_planner_frequency: 20.0
-    use_sim_time: True
+    use_sim_time: false
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
@@ -381,7 +381,7 @@ planner_server:
 
 smoother_server:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: false
     smoother_plugins: ["simple_smoother"]
     simple_smoother:
       plugin: "nav2_smoother::SimpleSmoother"
@@ -408,7 +408,7 @@ behavior_server:
     global_frame: odom
     robot_base_frame: base_link
     transform_tolerance: 0.1 #  坐标变换容忍时间
-    use_sim_time: true
+    use_sim_time: false
     simulate_ahead_time: 2.0
     max_rotational_vel: 10.0 # ！！最大旋转速度1.0 rad/s
     min_rotational_vel: 0.0
@@ -416,11 +416,11 @@ behavior_server:
 
 robot_state_publisher:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: false
 
 waypoint_follower:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: false
     loop_rate: 20
     stop_on_failure: false
     waypoint_task_executor_plugin: "wait_at_waypoint"
@@ -431,7 +431,7 @@ waypoint_follower:
 
 velocity_smoother:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: false
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
