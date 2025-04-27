@@ -23,7 +23,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch_ros.actions import LoadComposableNodes
+from launch_ros.actions import LoadComposableNodes,ComposableNodeContainer
 from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode, ParameterFile
 from nav2_common.launch import RewrittenYaml
@@ -195,10 +195,12 @@ def generate_launch_description():
                             {'node_names': lifecycle_nodes}]),
         ]
     )
-
-    load_composable_nodes = LoadComposableNodes(
+    navContainer=ComposableNodeContainer(
+        name='nav_nodes',
+        namespace='',
+        package='rclcpp_components',
+        executable='component_container',
         condition=IfCondition(use_composition),
-        target_container=container_name_full,
         composable_node_descriptions=[
             ComposableNode(
                 package='nav2_controller',
@@ -270,6 +272,6 @@ def generate_launch_description():
     ld.add_action(declare_log_level_cmd)
     # Add the actions to launch all of the navigation nodes
     ld.add_action(load_nodes)
-    ld.add_action(load_composable_nodes)
+    ld.add_action(navContainer)
 
     return ld
