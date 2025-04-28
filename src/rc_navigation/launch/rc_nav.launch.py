@@ -41,6 +41,7 @@ def generate_launch_description():
         package='rclcpp_components',
         executable='component_container_mt',
         output='screen',
+        parameters=[param_file_path],      #为了给cost_map传参拉的💩,链接为:https://github.com/ros-navigation/navigation2/issues/2147#issuecomment-915890304
     )
     ld.add_action(nav2_bringup_launch)
     ld.add_action(map_server_launch)
