@@ -19,7 +19,7 @@ USER ${USERNAME}
 #     && colcon build --symlink-install
 USER root
 #安装导航依赖
-RUN apt-get install -y ros-humble-nav2-bringup 
+RUN apt-get update && apt-get install -y ros-humble-nav2-bringup
 RUN echo "source /opt/ros/humble/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "export ROS_LOCALHOST_ONLY=1" >> /home/$USERNAME/.bashrc \
     && echo "export ROS_LOCALHOST_ONLY=1" >> /home/$USERNAME/.config/fish/config.fish \

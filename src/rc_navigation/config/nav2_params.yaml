@@ -237,7 +237,7 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True
         cost_scaling_factor: 2.0
-        inflation_radius: 0.8                          
+        inflation_radius: 0.5                          
 
       # voxel_layer:  # 3D体素层
       #   plugin: "nav2_costmap_2d::VoxelLayer"
@@ -407,7 +407,7 @@ behavior_server:
       plugin: "nav2_behaviors/Wait"
     assisted_teleop:
       plugin: "nav2_behaviors/AssistedTeleop"
-    global_frame: odom
+    global_frame: camera_init
     robot_base_frame: base_link
     transform_tolerance: 0.1 #  坐标变换容忍时间
     use_sim_time: false
