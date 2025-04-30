@@ -22,7 +22,7 @@ fi
 if [[ "$1" == "--github-action" ]]; then
     echo "构建并推送镜像: $IMAGE"
     docker buildx build \
-    --platform linux/amd64,linux/arm64 \
+    --platform $PLATFORMS \
     -t "$IMAGE" \
     -f "$SCRIPT_DIR/Dockerfile" \
     "$SCRIPT_DIR" \
