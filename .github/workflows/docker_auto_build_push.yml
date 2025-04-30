@@ -24,12 +24,6 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 安装 cosign（签名工具）
-        uses: sigstore/cosign-installer@v3.5.0
-        if: github.event_name != 'pull_request'
-        with:
-          cosign-release: 'v2.2.4'
-
       - name: 设置 Buildx 构建器
         uses: docker/setup-buildx-action@v3
 
@@ -48,17 +42,4 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: 执行自定义构建脚本
-        run: bash ./.devcontainer/build.bash
-
-      - name: 推送镜像
-        if: github.event_name != 'pull_request'
-        run: |
-          docker tag myimage:latest ${{ steps.meta.outputs.tags }}
-          docker push ${{ steps.meta.outputs.tags }}
-
-      - name: 镜像签名
-        if: github.event_name != 'pull_request'
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-          DIGEST: ${{ steps.meta.outputs.digest }}
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+        run: bash ./.devcontainer/build.bash --github-action
