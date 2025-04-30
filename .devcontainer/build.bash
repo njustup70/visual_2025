@@ -4,7 +4,7 @@
 SCRIPT_DIR=$(dirname "$0")
 
 # 设置默认 tag
-TAG="test"
+TAG="visual-2025"
 
 # 从外部传入的 IMAGE_REPO（格式：ghcr.io/user/repo 或 docker.io/user/repo）
 IMAGE_REPO=${IMAGE_REPO:-ghcr.io/elainasuki/rc2025}
@@ -18,7 +18,7 @@ if [[ "$1" == "--github-action" ]]; then
     docker buildx build \
     --platform linux/amd64,linux/arm64 \
     -t "$IMAGE" \
-    -f "$SCRIPT_DIR/test.Dockerfile" \
+    -f "$SCRIPT_DIR/Dockerfile" \
     "$SCRIPT_DIR" \
     --push
 else
