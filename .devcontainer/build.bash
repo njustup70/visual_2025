@@ -15,9 +15,12 @@ IMAGE="$IMAGE_REPO:$TAG"
 # 如果传入 --github-action 参数
 if [[ "$1" == "--github-action" ]]; then
     echo "构建并推送镜像: $IMAGE"
-    docker info
-    docker build -t "$IMAGE" "$SCRIPT_DIR" -f "$SCRIPT_DIR/test.Dockerfile"
-    docker push "$IMAGE"
+    docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    -t "$IMAGE" \
+    -f "$SCRIPT_DIR/test.Dockerfile" \
+    "$SCRIPT_DIR" \
+    --push
 else
     echo "本地构建 $IMAGE"
     docker build -t "$IMAGE" "$SCRIPT_DIR"
