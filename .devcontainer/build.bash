@@ -7,7 +7,7 @@ SCRIPT_DIR=$(dirname "$0")
 TAG="visual-2025"
 
 # 从外部传入的 IMAGE_REPO（格式：ghcr.io/user/repo 或 docker.io/user/repo）
-IMAGE_REPO=${IMAGE_REPO:-ghcr.io/elainasuki/rc2025}
+IMAGE_REPO=${IMAGE_REPO:-elainasuki/rc2025}
 
 # 组合完整镜像名
 IMAGE="$IMAGE_REPO:$TAG"
