@@ -3,8 +3,14 @@ name: Docker镜像信息检查
 on:
   push:
     branches: [ "git_action" ]  # 仅在推送到 master 分支时触发
+    paths:
+      - '**/Dockerfile*'      # 捕获所有以 Dockerfile 开头的文件，包括 Dockerfile 和 .Dockerfile
+      - '**/.dockerfile*'     # 捕获以 .dockerfile 开头的文件
   pull_request:
     branches: ["git_action"]  # 仅在 PR 合并到 git_action 分支时触发
+    paths:
+      - '**/Dockerfile*'      # 捕获所有以 Dockerfile 开头的文件，包括 Dockerfile 和 .Dockerfile
+      - '**/.dockerfile*'     # 捕获以 .dockerfile 开头的文件
 env:
   # 可设置为 docker.io 或 ghcr.io
   REGISTRY: docker.io
@@ -44,18 +50,5 @@ jobs:
           else
             echo "IMAGE_REPO=${{ env.REGISTRY }}/${{ env.REPO_NAME }}" >> "$GITHUB_ENV"
           fi
-      - name: 检查是否有 Dockerfile 相关变更
-        id: dockerfile-check
-        run: |
-          # 获取所有改动的文件，检查是否包含 dockerfile
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.event.before }} HEAD)
-          DOCKERFILE_CHANGED=$(echo "$CHANGED_FILES" | grep -i 'dockerfile' || true)
-          if [[ -n "$DOCKERFILE_CHANGED" ]]; then
-            echo "dockerfile_changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "dockerfile_changed=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: 执行自定义构建脚本
-        if: steps.dockerfile-check.outputs.dockerfile_changed == 'true'
         run: bash ./.devcontainer/build.bash --github-action
