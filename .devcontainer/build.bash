@@ -5,7 +5,7 @@ SCRIPT_DIR=$(dirname "$0")
 
 # 如果传入 --github-action 参数
 if [[ "$1" == "--github-action" ]]; then
-    docker build -t elainasuki/elaina/test:latest "$SCRIPT_DIR" -f "$SCRIPT_DIR/test.Dockerfile"
+    docker build -t elainasuki/rc2025/test:latest "$SCRIPT_DIR" -f "$SCRIPT_DIR/test.Dockerfile"
     docker push elainasuki/rc2025/test:latest
 else
     # 如果没有传入 --github-action 参数
