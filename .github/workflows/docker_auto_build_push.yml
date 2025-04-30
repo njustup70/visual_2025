@@ -48,7 +48,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: 执行自定义构建脚本
-        run: bash ./build-docker.sh
+        run: bash ./.devcontainer/build.bash
 
       - name: 推送镜像
         if: github.event_name != 'pull_request'
