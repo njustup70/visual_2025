@@ -24,7 +24,7 @@ if [[ "$1" == "--github-action" ]]; then
     docker buildx build \
     --platform linux/amd64,linux/arm64 \
     -t "$IMAGE" \
-    -f "$SCRIPT_DIR/test.Dockerfile" \
+    -f "$SCRIPT_DIR/Dockerfile" \
     "$SCRIPT_DIR" \
     --push
 else
