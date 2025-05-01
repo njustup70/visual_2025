@@ -16,7 +16,7 @@ IMAGE="$IMAGE_REPO:$TAG"
 PLATFORMS="linux/amd64"  # 默认只支持 amd64 架构
 
 if [[ "${BUILD_ARM64}" == "true" ]]; then
-    PLATFORMS=$PLATFORMS   # 如果环境变量 BUILD_ARM64 为 true，则支持 arm64 架构
+    PLATFORMS="$PLATFORMS,linux/arm64"   # 如果环境变量 BUILD_ARM64 为 true，则支持 arm64 架构
 fi
 # 如果传入 --github-action 参数
 if [[ "$1" == "--github-action" ]]; then
