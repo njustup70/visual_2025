@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(costmap_ultra)
 
 set(lib_name ${PROJECT_NAME}_core)
-
+set(lib_name_2 simple_laser_layer_plugin)
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(laser_geometry REQUIRED)
@@ -55,7 +55,9 @@ set(dependencies
 add_library(${lib_name} SHARED
   plugins/obstacle_layer.cpp
 )
-
+add_library(${lib_name_2} SHARED
+  plugins/simple_laser_layer.cpp
+)
 include_directories(
   include
 )
@@ -63,9 +65,12 @@ include_directories(
 ament_target_dependencies(${lib_name}
   ${dependencies}
 )
-
+ament_target_dependencies(${lib_name_2}
+  ${dependencies}
+)
 install(TARGETS
   ${lib_name}
+  ${lib_name_2}
   DESTINATION lib
 )
 
