@@ -29,6 +29,7 @@ void SimpleLaserLayer::onInitialize()
     node->declare_parameter(name_ + ".sensor_frame", "");
     node->declare_parameter(name_ + ".transform_tolerance", 0.1);
     node->declare_parameter(name_ + ".cost_map_width", 5.0);
+    node->declare_parameter(name_ + ".topic", "scan");
     // Parameter Initialization
     node->get_parameter(name_ + ".enabled", enabled_);
     node->get_parameter(name_ + ".footprint_clearing_enabled", footprint_clearing_enabled_);
@@ -40,14 +41,15 @@ void SimpleLaserLayer::onInitialize()
     node->get_parameter(name_ + ".cost_map_width", cost_map_width_);
     global_frame_ = layered_costmap_->getGlobalFrameID();
     // rolling_window_ = layered_costmap_->isRolling();
-
+    std::string laser_topic;
+    node->get_parameter(name_ + ".topic", laser_topic);
     // Dynamic Parameters
     dyn_params_handler_ = node->add_on_set_parameters_callback(
         std::bind(&SimpleLaserLayer::dynamicParametersCallback, this, std::placeholders::_1));
 
     // LaserScan Subscription
     laser_sub_ = node->create_subscription<sensor_msgs::msg::LaserScan>(
-        "scan", rclcpp::SensorDataQoS(),
+        laser_topic, rclcpp::SensorDataQoS(),
         std::bind(&SimpleLaserLayer::laserCallback, this, std::placeholders::_1));
 
     matchSize();
@@ -61,9 +63,13 @@ void SimpleLaserLayer::laserCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr
         // Get Transform
         tf2::Transform sensor_to_global;
         if (!getSensorPose(sensor_to_global))
+        {
+            RCLCPP_WARN(logger_, "Failed to get sensor pose");
             return;
+        }
+        // return;
         // 清空costmap
-        resetMaps();
+        // resetMaps();
         // Process Scan Data
         const double max_range = scan->range_max;
         const double min_range = scan->range_min;
