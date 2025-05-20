@@ -213,8 +213,8 @@ local_costmap:
       robot_radius: 0.22   # 机器人碰撞半径22cm
       plugins: ["obstacle_layer", "inflation_layer"] # 激活的层级
       obstacle_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        # plugin: "costmap_intensity::ObstacleLayerIntensity"
+        # plugin: "nav2_costmap_2d::VoxelLayer"
+        plugin: "costmap_intensity::ObstacleLayerIntensity"
         enabled: True
         combination_method: 0
         observation_sources: scan # 数据源名称
@@ -284,8 +284,8 @@ global_costmap:
       track_unknown_space: true # 将未知区域视为可通行区域
       plugins: ["static_layer", "obstacle_layer","inflation_layer"]
       obstacle_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        # plugin: "costmap_intensity::ObstacleLayerIntensity"
+        # plugin: "nav2_costmap_2d::VoxelLayer"
+        plugin: "costmap_intensity::ObstacleLayerIntensity"
         enabled: True
         combination_method: 1
         observation_sources: scan # 数据源名称
