@@ -8,7 +8,7 @@ from geometry_msgs.msg import TransformStamped
 from tf2_ros import TransformBroadcaster
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
-
+from EFK import FlexibleKalmanFilter
 class KalmanNode(Node):
     def __init__(self):
         super().__init__('kalman_node')
@@ -23,7 +23,7 @@ class KalmanNode(Node):
         self.last_time = self.get_clock().now()
         
         # 状态向量 [x, y, yaw, vx, vy, vyaw, ax, ay, ayaw]
-        self.kf = KalmanFilter(dim_x=9, dim_z=6)
+        self.kf = FlexibleKalmanFilter(dim_x=9)
         self.kf.x = np.zeros((9, 1))  # 初始化状态
         
         # 构建状态转移矩阵（非线性情况）
