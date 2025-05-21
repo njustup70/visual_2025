@@ -5,6 +5,7 @@ from geometry_msgs.msg import Twist
 from tf2_msgs.msg import TFMessage
 import math
 from geometry_msgs.msg import TransformStamped
+from tf2_ros import TransformBroadcaster
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 
@@ -84,7 +85,7 @@ class KalmanNode(Node):
         
         # 创建定时器
         self.timer = self.create_timer(self.dt, self.timer_callback)
-        
+        self.tf_broadcaster = TransformBroadcaster(self)
     def cmd_vel_callback(self, msg: Twist):
         """处理速度指令"""
         self.cmd_vel[0] = msg.linear.x
@@ -186,9 +187,22 @@ class KalmanNode(Node):
         
     def publish_fused_state(self):
         """发布融合后的状态"""
+        tf_pub=TransformStamped()
+        tf_pub.header.stamp = self.get_clock().now().to_msg()
+        tf_pub.header.frame_id = 'odom'
+        tf_pub.child_frame_id = self.get_parameter('publish_tf_name').value
+        tf_pub.transform.translation.x = self.kf.x[0, 0]
+        tf_pub.transform.translation.y = self.kf.x[1, 0]
+        tf_pub.transform.translation.z = 0.0
+        tf_pub.transform.rotation.x = 0.0
+        tf_pub.transform.rotation.y = 0.0
+        tf_pub.transform.rotation.z = math.sin(self.kf.x[2, 0] / 2.0)
+        tf_pub.transform.rotation.w = math.cos(self.kf.x[2, 0] / 2.0)
+        self.tf_broadcaster.sendTransform(tf_pub)
+        
         # 这里可以添加发布融合后状态的代码
-        fused_state = self.kf.x
-        self.get_logger().debug(f"Fused State: {fused_state.flatten()}")
+        #构造新的tf
+        # self.get_logger().debug(f"Fused State: {fused_state.flatten()}")
         
     @staticmethod
     def get_yaw_from_quaternion(x, y, z, w):
