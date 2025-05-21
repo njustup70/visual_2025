@@ -4,8 +4,9 @@ from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist
 from tf2_msgs.msg import TFMessage
 import math
+from rclpy.time import Time
 from geometry_msgs.msg import TransformStamped
-from tf2_ros import TransformBroadcaster
+from tf2_ros import TransformBroadcaster, TransformListener, Buffer
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 from EFK import FlexibleKalmanFilter
@@ -82,7 +83,8 @@ class KalmanNode(Node):
         self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 1)
         self.create_subscription(TFMessage, '/tf', self.tf_callback, 1)
         self.create_subscription(Imu, self.get_parameter('imu_topic').value, self.imu_callback, 1)
-        
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         # 创建定时器
         self.timer = self.create_timer(self.dt, self.timer_callback)
         self.tf_broadcaster = TransformBroadcaster(self)
@@ -95,14 +97,18 @@ class KalmanNode(Node):
     def tf_callback(self, msg: TFMessage):
         """处理TF消息"""
         transform_temp = None
-        for transform in msg.transforms:
-            if transform.child_frame_id == 'base_link' and transform.header.frame_id == 'odom':
-                transform_temp = transform
-                break
+        # for transform in msg.transforms:
+        #     if transform.child_frame_id == 'base_link' and transform.header.frame_id == 'odom':
+        #         transform_temp = transform
+        #         break
                 
-        if transform_temp is None:
+        # if transform_temp is None:
+        #     return
+        try:
+            transform_temp = self.tf_buffer.lookup_transform('odom', 'base_link',time=Time())
+        except Exception as e:
+            self.get_logger().error(f"TF lookup failed: {e}")
             return
-            
         # 提取位置信息
         translation = transform_temp.transform.translation
         rotation = transform_temp.transform.rotation
