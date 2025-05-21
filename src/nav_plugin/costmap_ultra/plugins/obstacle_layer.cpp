@@ -194,8 +194,7 @@ void ObstacleLayerUltra::onInitialize()
             "Creating an observation buffer for source %s, topic %s, frame %s",
             source.c_str(), topic.c_str(),
             sensor_frame.c_str());
-        // 创建tf_监听器
-        tf_listener_ptr_ = std::make_shared<tf2_ros::TransformListener>(*tf_, node, true);
+
         // create an observation buffer
         observation_buffers_.push_back(
             std::shared_ptr<ObservationBuffer>(
@@ -207,7 +206,6 @@ void ObstacleLayerUltra::onInitialize()
                     global_frame_,
                     sensor_frame, tf2::durationFromSec(transform_tolerance))));
 
-        // 创建引用,全部指向observation_buffers_
         // check if we'll add this buffer to our marking observation buffers
         if (marking)
         {
@@ -261,7 +259,7 @@ void ObstacleLayerUltra::onInitialize()
             observation_subscribers_.push_back(sub);
 
             observation_notifiers_.push_back(filter);
-            observation_notifiers_.back()->setTolerance(rclcpp::Duration::from_seconds(transform_tolerance));
+            observation_notifiers_.back()->setTolerance(rclcpp::Duration::from_seconds(0.05));
         }
         else
         {
@@ -351,7 +349,7 @@ ObstacleLayerUltra::dynamicParametersCallback(
     result.successful = true;
     return result;
 }
-// 转化成为点云
+
 void ObstacleLayerUltra::laserScanCallback(
     sensor_msgs::msg::LaserScan::ConstSharedPtr message,
     const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> &buffer)
@@ -453,9 +451,6 @@ void ObstacleLayerUltra::updateBounds(
     double robot_x, double robot_y, double robot_yaw, double *min_x,
     double *min_y, double *max_x, double *max_y)
 {
-    // RCLCPP_INFO(
-    //   logger_,"costmap_2d::ObstacleLayerUltra::updateBounds: robot_x: %f, robot_y: %f, robot_yaw: %f",
-    //   robot_x, robot_y, robot_yaw);
     std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
     if (rolling_window_)
     {
@@ -478,7 +473,7 @@ void ObstacleLayerUltra::updateBounds(
 
     // update the global current status
     current_ = current;
-    // RCLCPP_INFO(logger_, "current_: %d", current_);
+
     // raytrace freespace
     // for (unsigned int i = 0; i < clearing_observations.size(); ++i) {
     //   raytraceFreespace(clearing_observations[i], min_x, min_y, max_x, max_y);
