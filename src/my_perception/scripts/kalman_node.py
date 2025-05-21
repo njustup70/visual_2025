@@ -13,7 +13,7 @@ class KalmanNode(Node):
     def __init__(self):
         super().__init__('kalman_node')
         self.get_logger().info("Kalman滤波器节点已启动")
-        self.declare_parameter('imu_topic', '/imu/data')
+        self.declare_parameter('imu_topic', '/imu_transformed')
         self.declare_parameter('publish_tf_name', 'base_link_imu')
         self.declare_parameter('hz',100)
         self.declare_parameter('kalman_model',0)
@@ -211,3 +211,19 @@ class KalmanNode(Node):
         cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
         yaw = math.atan2(siny_cosp, cosy_cosp)
         return yaw    
+def main(args=None):
+    import rclpy
+    from rclpy.executors import SingleThreadedExecutor
+
+    rclpy.init(args=args)
+    node = KalmanNode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info("Keyboard Interrupt")
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+if __name__ == '__main__':
+    main()
