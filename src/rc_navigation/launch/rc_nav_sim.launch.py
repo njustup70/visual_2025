@@ -1,3 +1,8 @@
+"""_summary_
+仿真的rc_navigation导航launch文件
+    Returns:
+        _type_: _description_
+"""
 import os
 import yaml
 from ament_index_python.packages import get_package_share_directory
@@ -10,8 +15,8 @@ from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node,ComposableNodeContainer
 def generate_launch_description():
     ld=LaunchDescription()
-    param_file_path=os.path.join(get_package_share_directory('rc_navigation'),'config','nav2_params_real.yaml')
-    ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='false',description='Use simulation clock'))
+    param_file_path=os.path.join(get_package_share_directory('rc_navigation'),'config','nav2_params.yaml')
+    ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true',description='Use simulation clock'))
     ld.add_action(DeclareLaunchArgument('use_composition',default_value='False',description='Use lifecycle nodes'))
     ld.add_action(DeclareLaunchArgument('params_file',default_value=param_file_path,description='Full path to the ROS2 parameters file to use'))
     ld.add_action(DeclareLaunchArgument('autostart', default_value='True', description='Automatically startup the nav2 stack'))
@@ -26,7 +31,7 @@ def generate_launch_description():
                           }.items()
     )
     #======================================启动地图服务
-    map_path=os.path.join(my_packager_share_dir,'map','empty_map.yaml')
+    map_path=os.path.join(my_packager_share_dir,'map','court_map.yaml')
     # map_path=os.path.join(my_packager_share_dir,'map','empty_map.yaml')
     ld.add_action(DeclareLaunchArgument('map', default_value=map_path, description='Full path to map yaml file to load'))
     map_server_launch=IncludeLaunchDescription(

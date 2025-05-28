@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'python_pkg'
+package_name = 'example_py'
 
 setup(
     name=package_name,
@@ -14,15 +14,13 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Elaina',
-    maintainer_email='1463967532@qq.com',
+    maintainer_email='yutouxiaozhuang@gmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "imu_analysis = python_pkg.imu_analysis:main",
-            "imu_transform = python_pkg.imu_transform:main",
-            "node = python_pkg.node:main",
+            "node = example_py.node:main"
         ],
     },
 )
