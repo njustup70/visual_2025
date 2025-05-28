@@ -1,3 +1,8 @@
+"""_summary_
+仿真的rc_navigation导航launch文件
+    Returns:
+        _type_: _description_
+"""
 import os
 import yaml
 from ament_index_python.packages import get_package_share_directory
