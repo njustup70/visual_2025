@@ -52,8 +52,11 @@ protected:
     int combination_method_{1}; // 1: overwrite, 2: add, 3: subtract
     double _obstacle_max_range;
     double _obstacle_min_range;
+    double _transform_tolerance;
+    rclcpp::Time last_update_time_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr_;
     std::string map_frame_;
+    std::string laser_frame_;
     tf2_ros::Buffer *tf_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::shared_ptr<rclcpp::Subscription<sensor_msgs::msg::LaserScan>> laser_scan_sub_;
