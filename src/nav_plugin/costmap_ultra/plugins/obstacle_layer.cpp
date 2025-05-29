@@ -51,6 +51,8 @@ void ObstacleLayerUltra::onInitialize()
     std::stringstream ss(topics_string);
     std::string topic;
     std::string source;
+    enabled_ = true;
+    debug_ = false;
     matchSize();
     rolling_window_ = layered_costmap_->isRolling();
     while (ss >> source)
@@ -192,16 +194,17 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
             // RCLCPP_INFO(logger_, "Skipping invalid point: x=%f, y=%f", point.x, point.y);
         }
         unsigned int mx, my;
-        touch(point.x, point.y, min_x, min_y, max_x, max_y);
+
         if (worldToMap(point.x, point.y, mx, my))
         {
             // 设置代价为致命障碍物
             // setCost(mx, my, LETHAL_OBSTACLE);
             costmap_[getIndex(mx, my)] = LETHAL_OBSTACLE;
+            touch(point.x, point.y, min_x, min_y, max_x, max_y);
         }
         else
         {
-            RCLCPP_INFO(logger_, "Point (%f, %f) is out of bounds, skipping", point.x, point.y);
+            RCLCPP_DEBUG(logger_, "Point (%f, %f) is out of bounds, skipping", point.x, point.y);
         }
     }
     // 打印costmap障碍信息
@@ -234,7 +237,7 @@ void ObstacleLayerUltra::reset()
 {
     // Reset the costmap to free space
     std::fill(costmap_, costmap_ + getSizeInCellsX() * getSizeInCellsY(), FREE_SPACE);
-    RCLCPP_INFO(logger_, "xy: %d, %d", getSizeInCellsX(), getSizeInCellsY());
+    // RCLCPP_INFO(logger_, "xy: %d, %d", getSizeInCellsX(), getSizeInCellsY());
 
 } // namespace nav2_costmap_2d
 } // namespace nav2_costmap_2d
