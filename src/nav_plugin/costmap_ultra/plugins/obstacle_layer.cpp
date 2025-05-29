@@ -58,17 +58,13 @@ void ObstacleLayerUltra::onInitialize()
     while (ss >> source)
     {
         // get the parameters for the specific topic
-        double expected_update_rate;
 
         declareParameter(source + "." + "topic", rclcpp::ParameterValue(source));
-        declareParameter(source + "." + "expected_update_rate", rclcpp::ParameterValue(0.0));
         declareParameter(source + "." + "obstacle_max_range", rclcpp::ParameterValue(2.5));
         declareParameter(source + "." + "obstacle_min_range", rclcpp::ParameterValue(0.0));
 
         node->get_parameter(name_ + "." + source + "." + "topic", topic);
-        node->get_parameter(
-            name_ + "." + source + "." + "expected_update_rate",
-            expected_update_rate);
+
         // get the obstacle range for the sensor
         node->get_parameter(name_ + "." + source + "." + "obstacle_max_range", _obstacle_max_range);
         node->get_parameter(name_ + "." + source + "." + "obstacle_min_range", _obstacle_min_range);
@@ -132,6 +128,7 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
     {
         updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
     }
+    useExtraBounds(min_x, min_y, max_x, max_y);
     // useExtraBounds(min_x, min_y, max_x, max_y);
     // updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
     // useExtraBounds(min_x, min_y, max_x, max_y);
@@ -221,6 +218,7 @@ void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
 {
 
     std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
+
     switch (combination_method_)
     {
     case 0: // Overwrite
