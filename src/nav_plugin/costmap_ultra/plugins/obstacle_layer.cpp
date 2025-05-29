@@ -78,6 +78,11 @@ void ObstacleLayerUltra::onInitialize()
     laser_scan_sub_ = node->create_subscription<sensor_msgs::msg::LaserScan>(topic,
                                                                              rclcpp::SensorDataQoS(), [this](const sensor_msgs::msg::LaserScan::ConstSharedPtr &msg)
                                                                              { laserScanCallback(msg); });
+    if (debug_)
+    {
+        std::string node_name = node->get_name();
+        pointcloud_pub_ = node->create_publisher<sensor_msgs::msg::PointCloud2>(node_name + "/ultra_obstacle_layer_pointcloud", rclcpp::SensorDataQoS());
+    }
 }
 void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::ConstSharedPtr &scan)
 {
@@ -144,7 +149,12 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
         RCLCPP_ERROR(logger_, "TF2 transform failed: %s", ex.what());
         return;
     }
-
+    if (debug_)
+    {
+        pointcloud_pub_->publish(cloud_ros);
+        // map_cloud_ros.header.frame_id = map_frame_;
+        // RCLCPP_INFO(logger_, "Published transformed point cloud with %zu points", map_cloud_ros.data.size() / map_cloud_ros.point_step);
+    }
     // Convert back to pcl::PointCloud
     auto map_pointcloud_ptr = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     pcl::fromROSMsg(map_cloud_ros, *map_pointcloud_ptr);
@@ -165,16 +175,21 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
             costmap_[getIndex(mx, my)] = LETHAL_OBSTACLE;
         }
     }
+    // 打印costmap障碍信息
     // Update the bounds of the costmap
-    *min_x = robot_x - getSizeInMetersX() / 2.0;
-    *min_y = robot_y - getSizeInMetersY() / 2.0;
-    *max_x = robot_x + getSizeInMetersX() / 2.0;
-    *max_y = robot_y + getSizeInMetersY() / 2.0;
+    *min_x = robot_x - _obstacle_max_range / 2.0;
+    *min_y = robot_y - _obstacle_max_range / 2.0;
+    *max_x = robot_x + _obstacle_max_range / 2.0;
+    *max_y = robot_y + _obstacle_max_range / 2.0;
+    // RCLCPP_INFO(logger_, "Updated bounds: min_x=%f, min_y=%f, max_x=%f, max_y=%f",
+    //             *min_x, *min_y, *max_x, *max_y);
 }
 
 void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
                                      int min_i, int min_j, int max_i, int max_j)
 {
+    // RCLCPP_INFO(logger_, "Updating costs in the master grid from (%d, %d) to (%d, %d)",
+    //             min_i, min_j, max_i, max_j);
     switch (combination_method_)
     {
     case 0: // Overwrite

@@ -200,8 +200,8 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 20.0  # 代价地图更新频率(Hz)
-      publish_frequency: 20.0 # 地图数据发布频率(Hz)
+      update_frequency: 5.0  # 代价地图更新频率(Hz)
+      publish_frequency: 5.0 # 地图数据发布频率(Hz)
       global_frame: odom     # 全局坐标系（使用里程计坐标系）
       robot_base_frame: base_link  # 机器人本体坐标系
       use_sim_time: True     # 使用仿真时间

@@ -53,6 +53,7 @@ protected:
     double _obstacle_max_range;
     double _obstacle_min_range;
     double _transform_tolerance;
+    bool debug_ = true;
     rclcpp::Time last_update_time_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr_ = nullptr;
     std::string map_frame_;
@@ -60,6 +61,7 @@ protected:
     tf2_ros::Buffer *tf_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::shared_ptr<rclcpp::Subscription<sensor_msgs::msg::LaserScan>> laser_scan_sub_;
+    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>> pointcloud_pub_;
 };
 
 } // namespace nav2_costmap_2d
