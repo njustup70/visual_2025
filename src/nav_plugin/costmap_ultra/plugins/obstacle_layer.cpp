@@ -4,12 +4,14 @@
 #include <algorithm>
 #include <costmap_ultra/obstacle_layer.hpp>
 #include <memory>
-#include <pcl/common/transforms.h>
+#include <pcl/conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/pcl_ros/transforms.hpp>
 #include <string>
 #include <tf2_eigen/tf2_eigen/tf2_eigen.hpp>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <vector>
 PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::ObstacleLayerUltra, nav2_costmap_2d::Layer)
 
@@ -102,52 +104,72 @@ void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::Co
 }
 void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double robot_yaw, double *min_x, double *min_y, double *max_x, double *max_y)
 {
-    // 先清空map
+    // Reset map
     reset();
-    auto transform = geometry_msgs::msg::TransformStamped();
+
+    geometry_msgs::msg::TransformStamped transform;
     try
     {
-        transform = tf_->lookupTransform(map_frame_, laser_frame_, last_update_time_, rclcpp::Duration::from_seconds(_transform_tolerance));
+        transform = tf_->lookupTransform(
+            map_frame_,
+            laser_frame_,
+            last_update_time_,
+            rclcpp::Duration::from_seconds(_transform_tolerance));
     }
     catch (const tf2::TransformException &ex)
     {
         RCLCPP_WARN(logger_, "Could not transform %s to %s: %s", laser_frame_.c_str(), map_frame_.c_str(), ex.what());
         return;
     }
+
     if (cloud_ptr_ == nullptr || cloud_ptr_->points.empty())
     {
-        // RCLCPP_WARN(logger_, "No valid points in the point cloud.");
         return;
     }
-    auto map_pointcloud_ptr = pcl::PointCloud<pcl::PointXYZ>::Ptr();
 
-    Eigen::Matrix4f eigen = Eigen::Matrix4f::Identity();
+    // Convert pcl::PointCloud to sensor_msgs::PointCloud2
+    sensor_msgs::msg::PointCloud2 cloud_ros;
+    pcl::toROSMsg(*cloud_ptr_, cloud_ros);
+    cloud_ros.header.frame_id = laser_frame_;
+    cloud_ros.header.stamp = last_update_time_;
 
-    pcl_ros::transformAsMatrix(transform, eigen);
+    // Transform point cloud
+    sensor_msgs::msg::PointCloud2 map_cloud_ros;
     try
     {
-        pcl::transformPointCloud(*cloud_ptr_, *map_pointcloud_ptr, eigen);
+        tf2::doTransform(cloud_ros, map_cloud_ros, transform);
     }
-    catch (const std::exception &e)
+    catch (const tf2::TransformException &ex)
     {
-        RCLCPP_ERROR(logger_, "Error transforming point cloud: %s", e.what());
+        RCLCPP_ERROR(logger_, "TF2 transform failed: %s", ex.what());
         return;
     }
 
-    // // 将点云转换为代价地图
-    // for (const auto &point : map_pointcloud_ptr->points)
-    // {
-    //     if (std::isnan(point.x) || std::isnan(point.y))
-    //     {
-    //         continue; // Skip invalid points
-    //     }
-    //     unsigned int mx, my;
-    //     if (worldToMap(point.x, point.y, mx, my))
-    //     {
-    //         // 设置代价为致命障碍物
-    //         setCost(mx, my, LETHAL_OBSTACLE);
-    //     }
-    // }
+    // Convert back to pcl::PointCloud
+    auto map_pointcloud_ptr = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    pcl::fromROSMsg(map_cloud_ros, *map_pointcloud_ptr);
+    // RCLCPP_INFO(logger_, "Transformed point cloud has %zu points", map_pointcloud_ptr->points.size());
+    // 将点云转换为代价地图
+    for (const auto &point : map_pointcloud_ptr->points)
+    {
+        if (std::isnan(point.x) || std::isnan(point.y))
+        {
+            continue; // Skip invalid points
+            // RCLCPP_INFO(logger_, "Skipping invalid point: x=%f, y=%f", point.x, point.y);
+        }
+        unsigned int mx, my;
+        if (worldToMap(point.x, point.y, mx, my))
+        {
+            // 设置代价为致命障碍物
+            // setCost(mx, my, LETHAL_OBSTACLE);
+            costmap_[getIndex(mx, my)] = LETHAL_OBSTACLE;
+        }
+    }
+    // Update the bounds of the costmap
+    *min_x = robot_x - getSizeInMetersX() / 2.0;
+    *min_y = robot_y - getSizeInMetersY() / 2.0;
+    *max_x = robot_x + getSizeInMetersX() / 2.0;
+    *max_y = robot_y + getSizeInMetersY() / 2.0;
 }
 
 void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
@@ -168,7 +190,7 @@ void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
 void ObstacleLayerUltra::reset()
 {
     // Reset the costmap to free space
-    std::fill(costmap_, costmap_ + getSizeInCellsX() * getSizeInCellsY(), FREE_SPACE);
+    // std::fill(costmap_, costmap_ + getSizeInCellsX() * getSizeInCellsY(), FREE_SPACE);
 
 } // namespace nav2_costmap_2d
 } // namespace nav2_costmap_2d
