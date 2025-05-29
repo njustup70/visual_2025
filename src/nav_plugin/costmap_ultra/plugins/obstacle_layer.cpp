@@ -1,13 +1,14 @@
 #include <costmap_ultra/obstacle_layer.hpp>
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "nav2_costmap_2d/costmap_math.hpp"
 #include "pluginlib/class_list_macros.hpp"
 #include "sensor_msgs/point_cloud2_iterator.hpp"
+#include <algorithm>
+#include <memory>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <string>
+#include <vector>
 
 PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::ObstacleLayerUltra, nav2_costmap_2d::Layer)
 
@@ -32,7 +33,7 @@ void ObstacleLayerUltra::onInitialize()
 
     declareParameter("combination_method", rclcpp::ParameterValue(1));
     declareParameter("observation_sources", rclcpp::ParameterValue(std::string("")));
-
+    declareParameter("map_frame", rclcpp::ParameterValue(std::string("map")));
     auto node = node_.lock();
     if (!node)
     {
@@ -42,7 +43,7 @@ void ObstacleLayerUltra::onInitialize()
     node->get_parameter(name_ + "." + "combination_method", combination_method_);
     node->get_parameter("transform_tolerance", transform_tolerance);
     node->get_parameter(name_ + "." + "observation_sources", topics_string);
-
+    node->get_parameter(name_ + "." + "map_frame", map_frame_);
     // now we need to split the topics based on whitespace which we can use a stringstream for
     std::stringstream ss(topics_string);
 
@@ -50,9 +51,8 @@ void ObstacleLayerUltra::onInitialize()
     while (ss >> source)
     {
         // get the parameters for the specific topic
-        double observation_keep_time, expected_update_rate, min_obstacle_height, max_obstacle_height;
+        double expected_update_rate;
         std::string topic, sensor_frame, data_type;
-        bool inf_is_valid, clearing, marking;
 
         declareParameter(source + "." + "topic", rclcpp::ParameterValue(source));
         declareParameter(source + "." + "expected_update_rate", rclcpp::ParameterValue(0.0));
@@ -64,10 +64,40 @@ void ObstacleLayerUltra::onInitialize()
             name_ + "." + source + "." + "expected_update_rate",
             expected_update_rate);
         // get the obstacle range for the sensor
-        double obstacle_max_range, obstacle_min_range;
-        node->get_parameter(name_ + "." + source + "." + "obstacle_max_range", obstacle_max_range);
-        node->get_parameter(name_ + "." + source + "." + "obstacle_min_range", obstacle_min_range);
+        node->get_parameter(name_ + "." + source + "." + "obstacle_max_range", _obstacle_max_range);
+        node->get_parameter(name_ + "." + source + "." + "obstacle_min_range", _obstacle_min_range);
+    }
+    // 创建tf2_ros::Buffer对象
+    // tf_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
+    tf_ = new tf2_ros::Buffer(node->get_clock());
+    // 创建tf2_ros::TransformListener对象
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_);
+    // 创建订阅者
+}
+void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::ConstSharedPtr &scan)
+{
+    auto laser_frame = scan->header.frame_id;
+    cloud_ptr_ = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    float current_angle = scan->angle_min;
+    for (auto &point : scan->ranges)
+    {
+        if (point < scan->range_min || point > scan->range_max || std::isnan(point) || std::isinf(point))
+        {
+            continue; // Skip invalid points
+        }
+        current_angle += scan->angle_increment;
+        if (point < _obstacle_min_range || point > _obstacle_max_range)
+        {
+            continue; // Skip points outside the specified range
+        }
+        cloud_ptr_->points.emplace_back(pcl::PointXYZ{point * std::cos(current_angle),
+                                                      point * std::sin(current_angle), 0.0});
     }
 }
+void ObstacleLayerUltra::reset()
+{
+    // Reset the costmap to free space
+    std::fill(costmap_, costmap_ + getSizeInCellsX() * getSizeInCellsY(), FREE_SPACE);
 
+} // namespace nav2_costmap_2d
 } // namespace nav2_costmap_2d

@@ -27,7 +27,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(angles REQUIRED)
-
+find_package(PCL 1.12.1 REQUIRED)
 set(dependencies
   geometry_msgs
   laser_geometry
@@ -63,7 +63,9 @@ include_directories(
 ament_target_dependencies(${lib_name}
   ${dependencies}
 )
-
+target_link_libraries(${lib_name}
+  ${PCL_LIBRARIES}
+)
 install(TARGETS
   ${lib_name}
   DESTINATION lib
