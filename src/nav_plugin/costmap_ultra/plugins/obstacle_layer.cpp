@@ -91,20 +91,32 @@ void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::Co
     float current_angle = scan->angle_min;
     // RCLCPP_INFO(logger_, "Received laser scan with %zu points", scan->ranges.size());
     last_update_time_ = scan->header.stamp;
-    for (auto &point : scan->ranges)
+    for (size_t i = 0; i < scan->ranges.size(); ++i)
     {
-        if (point < scan->range_min || point > scan->range_max || std::isnan(point) || std::isinf(point))
+        float range = scan->ranges[i];
+
+        // 跳过无效点
+        if (range < scan->range_min || range > scan->range_max ||
+            std::isnan(range) || std::isinf(range))
         {
-            continue; // Skip invalid points
+            current_angle += scan->angle_increment; // 角度递增
+            continue;
         }
+
+        // 跳过不在障碍物检测范围内的点
+        if (range < _obstacle_min_range || range > _obstacle_max_range)
+        {
+            current_angle += scan->angle_increment; // 角度递增
+            continue;
+        }
+
+        // 计算点坐标并添加到点云
+        float x = range * std::cos(current_angle);
+        float y = range * std::sin(current_angle);
+        cloud_ptr_->points.emplace_back(pcl::PointXYZ{x, y, 0.0});
+
+        // 更新角度（注意：应在处理完当前点后更新角度）
         current_angle += scan->angle_increment;
-        if (point < _obstacle_min_range || point > _obstacle_max_range)
-        {
-            continue; // Skip points outside the specified range
-        }
-        cloud_ptr_->points.emplace_back(pcl::PointXYZ{point * std::cos(current_angle),
-                                                      point * std::sin(current_angle), 0.0});
-        // RCLCPP_INFO(logger_, "Point added: x=%f, y=%f", point * std::cos(current_angle), point * std::sin(current_angle));
     }
 }
 void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double robot_yaw, double *min_x, double *min_y, double *max_x, double *max_y)
@@ -151,7 +163,8 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
     }
     if (debug_)
     {
-        pointcloud_pub_->publish(cloud_ros);
+        // pointcloud_pub_->publish(cloud_ros);
+        pointcloud_pub_->publish(map_cloud_ros);
         // map_cloud_ros.header.frame_id = map_frame_;
         // RCLCPP_INFO(logger_, "Published transformed point cloud with %zu points", map_cloud_ros.data.size() / map_cloud_ros.point_step);
     }

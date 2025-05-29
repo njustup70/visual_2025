@@ -62,6 +62,8 @@ protected:
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::shared_ptr<rclcpp::Subscription<sensor_msgs::msg::LaserScan>> laser_scan_sub_;
     std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>> pointcloud_pub_;
+    /// @brief Used to project laser scans into point clouds
+    laser_geometry::LaserProjection projector_;
 };
 
 } // namespace nav2_costmap_2d
