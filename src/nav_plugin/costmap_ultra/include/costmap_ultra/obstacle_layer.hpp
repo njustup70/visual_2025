@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "nav2_costmap_2d/costmap_layer.hpp"
-
 #include "sensor_msgs/msg/laser_scan.hpp"
+#include <nav_msgs/msg/occupancy_grid.hpp>
 
 namespace nav2_costmap_2d
 {
@@ -54,6 +54,7 @@ protected:
     double _obstacle_min_range;
     double _transform_tolerance;
     bool debug_ = true;
+    bool rolling_window_ = false;
     rclcpp::Time last_update_time_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr_ = nullptr;
     std::string map_frame_;
@@ -62,6 +63,7 @@ protected:
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::shared_ptr<rclcpp::Subscription<sensor_msgs::msg::LaserScan>> laser_scan_sub_;
     std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>> pointcloud_pub_;
+    std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>> map_pub_;
     /// @brief Used to project laser scans into point clouds
     laser_geometry::LaserProjection projector_;
 };

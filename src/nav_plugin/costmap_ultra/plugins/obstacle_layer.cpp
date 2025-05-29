@@ -51,6 +51,8 @@ void ObstacleLayerUltra::onInitialize()
     std::stringstream ss(topics_string);
     std::string topic;
     std::string source;
+    matchSize();
+    rolling_window_ = layered_costmap_->isRolling();
     while (ss >> source)
     {
         // get the parameters for the specific topic
@@ -81,7 +83,8 @@ void ObstacleLayerUltra::onInitialize()
     if (debug_)
     {
         std::string node_name = node->get_name();
-        pointcloud_pub_ = node->create_publisher<sensor_msgs::msg::PointCloud2>(node_name + "/ultra_obstacle_layer_pointcloud", rclcpp::SensorDataQoS());
+        pointcloud_pub_ = node->create_publisher<sensor_msgs::msg::PointCloud2>(node_name + "/debug_pointcloud", rclcpp::SensorDataQoS());
+        map_pub_ = node->create_publisher<nav_msgs::msg::OccupancyGrid>(node_name + "/debug_map", rclcpp::SensorDataQoS());
     }
 }
 void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::ConstSharedPtr &scan)
@@ -121,7 +124,15 @@ void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::Co
 }
 void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double robot_yaw, double *min_x, double *min_y, double *max_x, double *max_y)
 {
+    std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
     // Reset map
+    if (rolling_window_)
+    {
+        updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
+    }
+    // useExtraBounds(min_x, min_y, max_x, max_y);
+    // updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
+    // useExtraBounds(min_x, min_y, max_x, max_y);
     reset();
 
     geometry_msgs::msg::TransformStamped transform;
@@ -181,28 +192,32 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
             // RCLCPP_INFO(logger_, "Skipping invalid point: x=%f, y=%f", point.x, point.y);
         }
         unsigned int mx, my;
+        touch(point.x, point.y, min_x, min_y, max_x, max_y);
         if (worldToMap(point.x, point.y, mx, my))
         {
             // 设置代价为致命障碍物
             // setCost(mx, my, LETHAL_OBSTACLE);
             costmap_[getIndex(mx, my)] = LETHAL_OBSTACLE;
         }
+        else
+        {
+            RCLCPP_INFO(logger_, "Point (%f, %f) is out of bounds, skipping", point.x, point.y);
+        }
     }
     // 打印costmap障碍信息
     // Update the bounds of the costmap
-    *min_x = robot_x - _obstacle_max_range / 2.0;
-    *min_y = robot_y - _obstacle_max_range / 2.0;
-    *max_x = robot_x + _obstacle_max_range / 2.0;
-    *max_y = robot_y + _obstacle_max_range / 2.0;
-    // RCLCPP_INFO(logger_, "Updated bounds: min_x=%f, min_y=%f, max_x=%f, max_y=%f",
-    //             *min_x, *min_y, *max_x, *max_y);
+    if (debug_)
+    {
+        RCLCPP_INFO(logger_, "Updated bounds: min_x=%f, min_y=%f, max_x=%f, max_y=%f,robot_x=%f,robot_y=%f",
+                    *min_x, *min_y, *max_x, *max_y, robot_x, robot_y);
+    }
 }
 
 void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
                                      int min_i, int min_j, int max_i, int max_j)
 {
-    // RCLCPP_INFO(logger_, "Updating costs in the master grid from (%d, %d) to (%d, %d)",
-    //             min_i, min_j, max_i, max_j);
+
+    std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
     switch (combination_method_)
     {
     case 0: // Overwrite
@@ -218,7 +233,8 @@ void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
 void ObstacleLayerUltra::reset()
 {
     // Reset the costmap to free space
-    // std::fill(costmap_, costmap_ + getSizeInCellsX() * getSizeInCellsY(), FREE_SPACE);
+    std::fill(costmap_, costmap_ + getSizeInCellsX() * getSizeInCellsY(), FREE_SPACE);
+    RCLCPP_INFO(logger_, "xy: %d, %d", getSizeInCellsX(), getSizeInCellsY());
 
 } // namespace nav2_costmap_2d
 } // namespace nav2_costmap_2d
