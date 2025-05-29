@@ -7,9 +7,10 @@
 #include <pcl/common/transforms.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl_ros/pcl_ros/transforms.hpp>
 #include <string>
+#include <tf2_eigen/tf2_eigen/tf2_eigen.hpp>
 #include <vector>
-
 PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::ObstacleLayerUltra, nav2_costmap_2d::Layer)
 
 using nav2_costmap_2d::FREE_SPACE;
@@ -81,6 +82,7 @@ void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::Co
     laser_frame_ = scan->header.frame_id;
     cloud_ptr_ = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     float current_angle = scan->angle_min;
+    // RCLCPP_INFO(logger_, "Received laser scan with %zu points", scan->ranges.size());
     last_update_time_ = scan->header.stamp;
     for (auto &point : scan->ranges)
     {
@@ -95,6 +97,7 @@ void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::Co
         }
         cloud_ptr_->points.emplace_back(pcl::PointXYZ{point * std::cos(current_angle),
                                                       point * std::sin(current_angle), 0.0});
+        // RCLCPP_INFO(logger_, "Point added: x=%f, y=%f", point * std::cos(current_angle), point * std::sin(current_angle));
     }
 }
 void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double robot_yaw, double *min_x, double *min_y, double *max_x, double *max_y)
@@ -111,40 +114,40 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
         RCLCPP_WARN(logger_, "Could not transform %s to %s: %s", laser_frame_.c_str(), map_frame_.c_str(), ex.what());
         return;
     }
-    if (!cloud_ptr_ || cloud_ptr_->points.empty())
+    if (cloud_ptr_ == nullptr || cloud_ptr_->points.empty())
     {
-        RCLCPP_WARN(logger_, "No valid points in the point cloud.");
+        // RCLCPP_WARN(logger_, "No valid points in the point cloud.");
         return;
     }
-    auto map_pointcloud_ptr = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    auto map_pointcloud_ptr = pcl::PointCloud<pcl::PointXYZ>::Ptr();
+
     Eigen::Matrix4f eigen = Eigen::Matrix4f::Identity();
 
-    eigen.block<3, 3>(0, 0) = Eigen::Quaternionf(
-                                  transform.transform.rotation.w,
-                                  transform.transform.rotation.x,
-                                  transform.transform.rotation.y,
-                                  transform.transform.rotation.z)
-                                  .toRotationMatrix();
-    eigen.block<3, 1>(0, 3) = Eigen::Vector3f(
-        transform.transform.translation.x,
-        transform.transform.translation.y,
-        transform.transform.translation.z);
-    pcl::transformPointCloud(*cloud_ptr_, *map_pointcloud_ptr, eigen);
-
-    // 将点云转换为代价地图
-    for (const auto &point : map_pointcloud_ptr->points)
+    pcl_ros::transformAsMatrix(transform, eigen);
+    try
     {
-        if (std::isnan(point.x) || std::isnan(point.y))
-        {
-            continue; // Skip invalid points
-        }
-        unsigned int mx, my;
-        if (worldToMap(point.x, point.y, mx, my))
-        {
-            // 设置代价为致命障碍物
-            setCost(mx, my, LETHAL_OBSTACLE);
-        }
+        pcl::transformPointCloud(*cloud_ptr_, *map_pointcloud_ptr, eigen);
     }
+    catch (const std::exception &e)
+    {
+        RCLCPP_ERROR(logger_, "Error transforming point cloud: %s", e.what());
+        return;
+    }
+
+    // // 将点云转换为代价地图
+    // for (const auto &point : map_pointcloud_ptr->points)
+    // {
+    //     if (std::isnan(point.x) || std::isnan(point.y))
+    //     {
+    //         continue; // Skip invalid points
+    //     }
+    //     unsigned int mx, my;
+    //     if (worldToMap(point.x, point.y, mx, my))
+    //     {
+    //         // 设置代价为致命障碍物
+    //         setCost(mx, my, LETHAL_OBSTACLE);
+    //     }
+    // }
 }
 
 void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,

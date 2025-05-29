@@ -54,7 +54,7 @@ protected:
     double _obstacle_min_range;
     double _transform_tolerance;
     rclcpp::Time last_update_time_;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr_ = nullptr;
     std::string map_frame_;
     std::string laser_frame_;
     tf2_ros::Buffer *tf_;
