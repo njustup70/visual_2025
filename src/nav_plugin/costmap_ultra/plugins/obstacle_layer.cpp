@@ -94,6 +94,25 @@ void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::Co
                                                       point * std::sin(current_angle), 0.0});
     }
 }
+void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double robot_yaw, double *min_x, double *min_y, double *max_x, double *max_y)
+{
+}
+
+void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
+                                     int min_i, int min_j, int max_i, int max_j)
+{
+    switch (combination_method_)
+    {
+    case 0: // Overwrite
+        updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);
+        break;
+    case 1: // Maximum
+        updateWithMax(master_grid, min_i, min_j, max_i, max_j);
+        break;
+    default: // Nothing
+        break;
+    }
+}
 void ObstacleLayerUltra::reset()
 {
     // Reset the costmap to free space
