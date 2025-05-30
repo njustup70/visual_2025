@@ -33,7 +33,7 @@ void ObstacleLayerUltra::onInitialize()
 
     // The topics that we'll subscribe to from the parameter server
     std::string topics_string;
-
+    declareParameter("enabled", rclcpp::ParameterValue(true));
     declareParameter("combination_method", rclcpp::ParameterValue(1));
     declareParameter("observation_sources", rclcpp::ParameterValue(std::string("")));
     declareParameter("map_frame", rclcpp::ParameterValue(std::string("map")));
@@ -47,13 +47,14 @@ void ObstacleLayerUltra::onInitialize()
     node->get_parameter("transform_tolerance", _transform_tolerance);
     node->get_parameter(name_ + "." + "observation_sources", topics_string);
     node->get_parameter(name_ + "." + "map_frame", map_frame_);
+    node->get_parameter(name_ + "." + "enabled", enabled_);
     // now we need to split the topics based on whitespace which we can use a stringstream for
     std::stringstream ss(topics_string);
     std::string topic;
     std::string source;
-    enabled_ = true;
+    // enabled_ = true;
     debug_ = false;
-    current_ = true;
+    current_ = true; // 奇妙小参数,一定要为true,否则会导致导航阻塞
     matchSize();
     rolling_window_ = layered_costmap_->isRolling();
     while (ss >> source)
@@ -86,6 +87,11 @@ void ObstacleLayerUltra::onInitialize()
         map_pub_ = node->create_publisher<nav_msgs::msg::OccupancyGrid>(node_name + "/debug_map", rclcpp::SensorDataQoS());
     }
 }
+/**
+ * @brief 将雷达数据转化为点云数据，并存储在点云指针中
+ *
+ * @param scan
+ */
 void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::ConstSharedPtr &scan)
 {
     laser_frame_ = scan->header.frame_id;
@@ -124,17 +130,14 @@ void ObstacleLayerUltra::laserScanCallback(const sensor_msgs::msg::LaserScan::Co
 void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double robot_yaw, double *min_x, double *min_y, double *max_x, double *max_y)
 {
     std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
-    // Reset map
+    // 要更新原点,定式
     if (rolling_window_)
     {
         updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
     }
     useExtraBounds(min_x, min_y, max_x, max_y);
-    // useExtraBounds(min_x, min_y, max_x, max_y);
-    // updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
-    // useExtraBounds(min_x, min_y, max_x, max_y);
     reset();
-
+    // 获得雷达到map的变换
     geometry_msgs::msg::TransformStamped transform;
     try
     {
@@ -174,29 +177,23 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
     }
     if (debug_)
     {
-        // pointcloud_pub_->publish(cloud_ros);
         pointcloud_pub_->publish(map_cloud_ros);
-        // map_cloud_ros.header.frame_id = map_frame_;
-        // RCLCPP_INFO(logger_, "Published transformed point cloud with %zu points", map_cloud_ros.data.size() / map_cloud_ros.point_step);
     }
-    // Convert back to pcl::PointCloud
     auto map_pointcloud_ptr = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     pcl::fromROSMsg(map_cloud_ros, *map_pointcloud_ptr);
-    // RCLCPP_INFO(logger_, "Transformed point cloud has %zu points", map_pointcloud_ptr->points.size());
+
     // 将点云转换为代价地图
     for (const auto &point : map_pointcloud_ptr->points)
     {
         if (std::isnan(point.x) || std::isnan(point.y))
         {
             continue; // Skip invalid points
-            // RCLCPP_INFO(logger_, "Skipping invalid point: x=%f, y=%f", point.x, point.y);
         }
         unsigned int mx, my;
 
         if (worldToMap(point.x, point.y, mx, my))
         {
             // 设置代价为致命障碍物
-            // setCost(mx, my, LETHAL_OBSTACLE);
             costmap_[getIndex(mx, my)] = LETHAL_OBSTACLE;
             touch(point.x, point.y, min_x, min_y, max_x, max_y);
         }
@@ -206,14 +203,21 @@ void ObstacleLayerUltra::updateBounds(double robot_x, double robot_y, double rob
         }
     }
     // 打印costmap障碍信息
-    // Update the bounds of the costmap
     if (debug_)
     {
         RCLCPP_INFO(logger_, "Updated bounds: min_x=%f, min_y=%f, max_x=%f, max_y=%f,robot_x=%f,robot_y=%f",
                     *min_x, *min_y, *max_x, *max_y, robot_x, robot_y);
     }
 }
-
+/**
+ * @brief 根据缓冲区的地图更新主地图的代价
+ *
+ * @param master_grid
+ * @param min_i
+ * @param min_j
+ * @param max_i
+ * @param max_j
+ */
 void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
                                      int min_i, int min_j, int max_i, int max_j)
 {
@@ -232,6 +236,10 @@ void ObstacleLayerUltra::updateCosts(nav2_costmap_2d::Costmap2D &master_grid,
         break;
     }
 }
+/**
+ * @brief 清空代价地图，将所有单元格设置为FREE_SPACE
+ *
+ */
 void ObstacleLayerUltra::reset()
 {
     // Reset the costmap to free space
