@@ -53,6 +53,7 @@ void ObstacleLayerUltra::onInitialize()
     std::string source;
     enabled_ = true;
     debug_ = false;
+    current_ = true;
     matchSize();
     rolling_window_ = layered_costmap_->isRolling();
     while (ss >> source)
