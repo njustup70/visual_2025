@@ -231,14 +231,22 @@ class RandomGoalGenerator(Node):
     def __init__(self):
         super().__init__('random_goal_generator')
         
+        # 声明参数并设置默认值
+        self.declare_parameter('costmap_topic', '/local_costmap/costmap')  # 新增代价地图话题参数
+        
+        # 获取参数值
+        costmap_topic = self.get_parameter('costmap_topic').value
+        
+        self.get_logger().info(f"使用代价地图话题: {costmap_topic}")
+        
         # 初始化模块
         self.point_generator = RandomPointGenerator()
         self.navigation_handler = NavigationHandler(self)
         
-        # 订阅局部代价地图
+        # 订阅局部代价地图（使用参数化的话题名称）
         self.subscription = self.create_subscription(
             OccupancyGrid,
-            '/local_costmap/costmap',
+            costmap_topic,  # 使用参数化的代价地图话题
             self.costmap_callback,
             10)
         
