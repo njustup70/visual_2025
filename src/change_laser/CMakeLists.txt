@@ -10,28 +10,11 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(nav2_msgs REQUIRED) # 用于Costmap消息
-find_package(geometry_msgs REQUIRED) # 用于PoseArray消息
 
 add_executable(laser_change_node src/laser_change.cpp)
 ament_target_dependencies(laser_change_node
   rclcpp tf2_ros sensor_msgs)
 
-# 创建可执行文件
-add_executable(obstacle_extractor_node
-  src/obstacle_extractor.cpp 
-)
-ament_target_dependencies(obstacle_extractor_node
-  rclcpp
-  nav2_msgs
-  geometry_msgs
-)
-
-# 安装规则
-install(TARGETS
-  obstacle_extractor_node
-  DESTINATION lib/${PROJECT_NAME}
-)
 install(TARGETS laser_change_node
   DESTINATION lib/${PROJECT_NAME})
 
