@@ -145,14 +145,14 @@ controller_server:
       ObstaclesCritic: # 如果容易撞到低矮的障碍物，检查地形分析是否正确然后再调整这个参数
         enabled: true
         cost_power: 1
-        repulsion_weight: 0.2 #! Higher radii should correspond to reduced repulsion_weight due to the penalty formation (e.g. inflation_radius - min_dist_to_obstacle). 
+        repulsion_weight: 0.4 #! Higher radii should correspond to reduced repulsion_weight due to the penalty formation (e.g. inflation_radius - min_dist_to_obstacle). 
         # This is separated from the critical term to allow for fine tuning of obstacle behaviors with path alignment for dynamic scenes without impacting actions which may directly lead to near-collisions. This is applied within the inflation_radius distance from obstacles.
         critical_weight: 20.0
         consider_footprint: false # turn on this can increase computation cost
         collision_cost: 10.0
-        collision_margin_distance: 0.05 # 0.05 # Margin distance (m) from collision to apply severe penalty, similar to footprint inflation. Between 0.05-0.2 is reasonable. Note that it will highly influence the controller not to enter spaces more confined than this, so ensure this parameter is set lower than the narrowest you expect the robot to need to traverse through.
+        collision_margin_distance: 0.15 # 0.05 # Margin distance (m) from collision to apply severe penalty, similar to footprint inflation. Between 0.05-0.2 is reasonable. Note that it will highly influence the controller not to enter spaces more confined than this, so ensure this parameter is set lower than the narrowest you expect the robot to need to traverse through.
         near_goal_distance: 0.1 # if the robot is within this distance of the goal, it will not be repelled by obstacles.
-        inflation_radius: 0.4 # Radius to inflate costmap around lethal obstacles. This should be the same as for your inflation layer (Humble only)
+        inflation_radius: 0.5 # Radius to inflate costmap around lethal obstacles. This should be the same as for your inflation layer (Humble only)
         cost_scaling_factor: 10.0 # Exponential decay factor across inflation radius. This should be the same as for your inflation layer (Humble only)
         inflation_layer_name: ["local_inflation_layer","global_inflation_layer"] # 
       PathAlignCritic:
