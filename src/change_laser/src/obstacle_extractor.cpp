@@ -1,7 +1,7 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <iomanip>
 #include <mutex>
-#include <nav_msgs/msg/occupancy_grid.hpp>
+#include <nav_msgs/msg/occupancy_grid.hpp> // 修改为 OccupancyGrid
 #include <rclcpp/rclcpp.hpp>
 
 // 定义障碍物阈值
@@ -11,7 +11,7 @@ class ObstacleExtractor : public rclcpp::Node
 {
 public:
     ObstacleExtractor()
-        : Node("obstacle_extractor"), clear_count_(0)
+        : Node("obstacle_extractor")
     {
         // 1. 动态参数声明
         this->declare_parameter("costmap_topic", "/local_costmap/costmap");
@@ -39,6 +39,7 @@ private:
 
     void recreate_subscription()
     {
+        // 修改为订阅 OccupancyGrid 类型
         costmap_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
             costmap_topic_, 10,
             [this](const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
@@ -53,18 +54,22 @@ private:
         obstacles.header = msg->header; // 继承全局坐标系
 
         const auto &data = msg->data;
-        const double res = msg->info.resolution;
+        const double res = msg->info.resolution; // 修改字段访问
         const double ox = msg->info.origin.position.x;
         const double oy = msg->info.origin.position.y;
         const uint32_t width = msg->info.width;
         const uint32_t height = msg->info.height;
 
-        // 障碍物检测
-        bool has_obstacles = false;
+        // 预分配内存优化
+        obstacles.poses.reserve(data.size() / 20);
+
+        // 单次遍历优化
         for (uint32_t idx = 0; idx < data.size(); ++idx)
         {
+            // 修改障碍物检测逻辑：值 > OBSTACLE_THRESHOLD 视为障碍物
             if (data[idx] > OBSTACLE_THRESHOLD && data[idx] != -1)
             {
+                // 计算栅格坐标
                 const uint32_t i = idx / width;
                 const uint32_t j = idx % width;
 
@@ -72,43 +77,21 @@ private:
                 p.position.x = ox + (j + 0.5) * res;
                 p.position.y = oy + (i + 0.5) * res;
                 obstacles.poses.push_back(p);
-                has_obstacles = true;
             }
         }
 
-        // ==== 新增逻辑：障碍物消失计数 ====
-        if (has_obstacles)
+        // 打印障碍点信息
+        print_obstacle_info(obstacles, res, width, height);
+
+        // 发布前检查避免空消息
+        if (!obstacles.poses.empty())
         {
-            // 检测到障碍物，重置计数器
-            clear_count_ = 0;
             obstacle_pub_->publish(obstacles);
             RCLCPP_INFO(this->get_logger(), "发布 %ld 个障碍点", obstacles.poses.size());
         }
         else
         {
-            // 无障碍物，增加计数
-            clear_count_++;
-
-            if (clear_count_ >= 5)
-            {
-                // 连续5次无障碍物，发布空集合并重置计数器
-                geometry_msgs::msg::PoseArray empty_obstacles;
-                empty_obstacles.header.stamp = this->now();
-                empty_obstacles.header.frame_id = msg->header.frame_id;
-                obstacle_pub_->publish(empty_obstacles);
-                RCLCPP_INFO(this->get_logger(), "连续5次未检测到障碍物，已清空障碍点");
-                clear_count_ = 0; // 重置计数器
-            }
-            else
-            {
-                RCLCPP_WARN(this->get_logger(), "未检测到障碍物 (%d/5)", clear_count_);
-            }
-        }
-
-        // 打印障碍点信息（只在有障碍物时显示）
-        if (has_obstacles)
-        {
-            print_obstacle_info(obstacles, res, width, height);
+            RCLCPP_WARN(this->get_logger(), "未检测到障碍物");
         }
     }
 
@@ -122,6 +105,7 @@ private:
                     width, height, width * resolution, height * resolution);
         RCLCPP_INFO(this->get_logger(), "分辨率: %.3f m", resolution);
 
+        // 打印前5个障碍点位置
         size_t print_count = std::min(static_cast<size_t>(5), obstacles.poses.size());
         for (size_t i = 0; i < print_count; ++i)
         {
@@ -160,10 +144,9 @@ private:
 
     // 成员变量
     std::string costmap_topic_;
-    rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_sub_;
+    rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_sub_; // 修改类型
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr obstacle_pub_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_;
-    int clear_count_; // 新增：障碍物消失计数器
 };
 
 int main(int argc, char **argv)
