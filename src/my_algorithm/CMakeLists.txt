@@ -31,5 +31,9 @@ install(
   src/decide.py # 替换为你的Python节点文件路径
   DESTINATION lib/${PROJECT_NAME}
 )
-
+install(
+  PROGRAMS
+  src/logic.py # 替换为你的Python节点文件路径
+  DESTINATION lib/${PROJECT_NAME}
+)
 ament_package()
