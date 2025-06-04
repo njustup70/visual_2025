@@ -69,6 +69,7 @@ class OptimalPointSelector(Node):
         
         # 存储障碍物点
         self.obstacle_points = []
+        self.obstacle_data_received = False  # 新增：标记是否收到障碍物数据
         
         # 参数变更回调
         self.add_on_set_parameters_callback(self.param_callback)
@@ -87,6 +88,7 @@ class OptimalPointSelector(Node):
     def obstacle_callback(self, msg):
         """障碍物数据回调"""
         self.obstacle_points = [pose.position for pose in msg.poses]
+        self.obstacle_data_received = True  # 标记已收到障碍物数据
         self.get_logger().info(
             f"收到 {len(self.obstacle_points)} 个障碍物点", 
             throttle_duration_sec=2
@@ -99,7 +101,6 @@ class OptimalPointSelector(Node):
                 obstacle_info.append(f"障碍物{i+1}: ({obs.x:.2f}, {obs.y:.2f})")
             self.get_logger().info(f"障碍物位置(前5个): {'; '.join(obstacle_info)}")
     
-    # 新增：最优点的回调函数
     def optimal_point_callback(self, msg):
         """最优点的回调函数 - 转换为Point格式发布"""
         point_msg = Point()
@@ -147,11 +148,19 @@ class OptimalPointSelector(Node):
         raw_angle_scores = []
         
         self.get_logger().info("开始计算候选点得分...")
+        
+        # 检查是否收到障碍物数据
+        if not self.obstacle_data_received or not self.obstacle_points:
+            self.get_logger().warn("⚠️ 未收到障碍物数据或障碍物列表为空，障碍物得分设为满分")
+            # 如果没有障碍物数据，为所有点设置相同的最大障碍物距离得分
+            raw_obstacle_scores = [10.0] * len(msg.poses)
+        else:
+            for pose in msg.poses:
+                # 障碍物距离评分
+                obs_score = self.calculate_obstacle_score(pose.position, self.obstacle_points)
+                raw_obstacle_scores.append(obs_score)
+        
         for pose in msg.poses:
-            # 障碍物距离评分
-            obs_score = self.calculate_obstacle_score(pose.position, self.obstacle_points)
-            raw_obstacle_scores.append(obs_score)
-            
             # 角度偏离评分
             angle_score = self.calculate_angle_score(pose.position, center, refer)
             raw_angle_scores.append(angle_score)
@@ -167,7 +176,13 @@ class OptimalPointSelector(Node):
         )
         
         # 归一化处理
-        norm_obstacle = self.normalize_scores(raw_obstacle_scores, higher_better=True)
+        if not self.obstacle_data_received or not self.obstacle_points:
+            # 如果没有障碍物数据，归一化障碍物得分为全1
+            norm_obstacle = [1.0] * len(msg.poses)
+            self.get_logger().info("无障碍物数据，障碍物归一化得分设置为全1")
+        else:
+            norm_obstacle = self.normalize_scores(raw_obstacle_scores, higher_better=True)
+        
         norm_angle = [1 - (angle/90) for angle in raw_angle_scores]  # 角度越小越好
         norm_radius = 1 - (radius_score / max_diff)  # 差值越小越好
         
