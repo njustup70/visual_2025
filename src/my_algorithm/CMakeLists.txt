@@ -28,7 +28,7 @@ endif()
 
 install(
   PROGRAMS
-  src/decide.py # 替换为你的Python节点文件路径
+  src/random_generate.py # 替换为你的Python节点文件路径
   DESTINATION lib/${PROJECT_NAME}
 )
 install(
