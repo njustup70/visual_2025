@@ -3,18 +3,119 @@ import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
 import random
+import math
 import time
 from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Point, PoseArray, Pose
 from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from std_msgs.msg import Header
+from rcl_interfaces.msg import SetParametersResult, ParameterDescriptor, ParameterType
 
 class RandomPointGenerator:
     """独立的地图处理和随机点生成模块"""
-    def __init__(self):
+    def __init__(self, node): 
+        self.node = node
         self.costmap_data = None
-        self.map_info_printed = False  # 新增标志位，确保只打印一次
+        self.map_info_printed = False
+        self.candidate_points = []  # 存储候选点
+        
+        # 声明动态参数
+        self.node.declare_parameter('map_x', 7.0)  # 地图X尺寸
+        self.node.declare_parameter('map_y', -14.0)  # 地图Y尺寸
+        self.node.declare_parameter('origin_x', 0.0)  # 原点X坐标
+        self.node.declare_parameter('origin_y', 0.0)  # 原点Y坐标
+        self.node.declare_parameter('center_x', 3.5)  # 圆心X坐标
+        self.node.declare_parameter('center_y', -14.0)  # 圆心Y坐标
+        self.node.declare_parameter('radius_min', 3.0)  # 最小半径
+        self.node.declare_parameter('radius_max', 4.0)  # 最大半径
+        self.node.declare_parameter('num_points', 36)  # 候选点数量
+        
+        # 新增：发布模式参数 (fixed/dynamic)
+        self.node.declare_parameter(
+            'publish_mode', 'fixed',
+            ParameterDescriptor(
+                description='候选点发布模式: fixed=固定一组点, dynamic=持续生成新点',
+                type=ParameterType.PARAMETER_STRING,
+                read_only=False,
+                additional_constraints="Allowed values: ['fixed', 'dynamic']"
+            )
+        )
+        
+        # 新增：持续发布参数
+        self.node.declare_parameter(
+            'continuous_publish', True,
+            ParameterDescriptor(
+                description='是否持续发布候选点',
+                type=ParameterType.PARAMETER_BOOL
+            )
+        )
+        
+        # 新增：发布频率参数 (Hz)
+        self.node.declare_parameter(
+            'publish_frequency', 1.0,
+            ParameterDescriptor(
+                description='候选点发布频率 (Hz)',
+                type=ParameterType.PARAMETER_DOUBLE
+            )
+        )
+        
+        # 创建候选点发布器
+        self.points_pub = self.node.create_publisher(
+            PoseArray,
+            '/points_select',
+            10
+        )
+        
+        # 添加参数回调
+        self.param_callback = self.node.add_on_set_parameters_callback(
+            self.param_callback_handler
+        )
+        
+        # 创建定时器用于持续发布
+        self.create_publish_timer()
+    
+    def create_publish_timer(self):
+        """创建或更新发布定时器"""
+        # 如果已有定时器，先取消
+        if hasattr(self, 'publish_timer'):
+            self.publish_timer.cancel()
+        
+        # 获取发布频率参数
+        frequency = self.node.get_parameter('publish_frequency').value
+        if frequency <= 0:
+            frequency = 1.0  # 默认1Hz
+        
+        # 创建新定时器
+        self.publish_timer = self.node.create_timer(
+            1.0 / frequency,  # 秒
+            self.publish_candidate_points
+        )
+    
+    def param_callback_handler(self, params):
+        """处理参数更新"""
+        for param in params:
+            param_name = param.name
+            # 当圆心、半径或发布模式变化时重新生成点
+            if param_name in ['center_x', 'center_y', 'radius_min', 'radius_max', 'num_points', 'publish_mode']:
+                self.node.get_logger().info(
+                    f"参数更新: {param_name} = {param.value}"
+                )
+                if self.costmap_data:
+                    self.generate_candidate_points()
+            
+            # 当发布频率变化时更新定时器
+            elif param_name == 'publish_frequency':
+                self.create_publish_timer()
+            
+            # 当持续发布设置变化时
+            elif param_name == 'continuous_publish':
+                if param.value:
+                    self.create_publish_timer()
+                elif hasattr(self, 'publish_timer'):
+                    self.publish_timer.cancel()
+        
+        return SetParametersResult(successful=True)
     
     def update_costmap(self, msg):
         """更新代价地图数据"""
@@ -24,6 +125,12 @@ class RandomPointGenerator:
         if not self.map_info_printed and self.costmap_data:
             self.print_map_info()
             self.map_info_printed = True
+            # 生成候选点
+            self.generate_candidate_points()
+        
+        # 动态模式下每次地图更新都生成新点
+        elif self.node.get_parameter('publish_mode').value == 'dynamic':
+            self.generate_candidate_points()
     
     def print_map_info(self):
         """打印代价地图大小和物理边界信息"""
@@ -73,32 +180,91 @@ class RandomPointGenerator:
         cost = self.costmap_data.data[index]
         return cost <= 50
 
-    def generate_random_goal(self):
-        """生成随机可达目标点"""
-        if not self.costmap_data:
-            return None
+    def generate_candidate_points(self):
+        """在圆环区域内生成均匀分布的候选点"""
+        # 获取动态参数值
+        center_x = self.node.get_parameter('center_x').value
+        center_y = self.node.get_parameter('center_y').value
+        radius_min = self.node.get_parameter('radius_min').value
+        radius_max = self.node.get_parameter('radius_max').value
+        num_points = self.node.get_parameter('num_points').value
         
-        width = self.costmap_data.info.width
-        height = self.costmap_data.info.height
-        traversable_cells = []
+        # 清空候选点列表
+        self.candidate_points = []
         
-        # 遍历所有栅格，筛选可通行点
-        for y in range(height):
-            for x in range(width):
-                if self.is_traversable(x, y) and self.costmap_data.data[y * width + x] < 10:
-                    traversable_cells.append((x, y))
-        
-        if not traversable_cells:
-            return None
+        # 在圆环区域内均匀生成点
+        for i in range(num_points):
+            # 计算角度（均匀分布）
+            angle = 2 * math.pi * i / num_points
             
-        goal_x, goal_y = random.choice(traversable_cells)
-        resolution = self.costmap_data.info.resolution
-        origin_x = self.costmap_data.info.origin.position.x
-        origin_y = self.costmap_data.info.origin.position.y
-        world_x = origin_x + (goal_x + 0.5) * resolution
-        world_y = origin_y + (goal_y + 0.5) * resolution
+            # 在半径范围内随机选择半径
+            radius = random.uniform(radius_min, radius_max)
+            
+            # 计算点的坐标
+            x = center_x + radius * math.cos(angle)
+            y = center_y + radius * math.sin(angle)
+            
+            # 添加到候选点列表
+            self.candidate_points.append((x, y))
         
-        return Point(x=world_x, y=world_y)
+        # 发布候选点
+        self.publish_candidate_points()
+    
+    def publish_candidate_points(self):
+        """发布候选点到/points_select话题"""
+        if not self.candidate_points:
+            return
+            
+        pose_array = PoseArray()
+        pose_array.header = Header(
+            stamp=self.node.get_clock().now().to_msg(),
+            frame_id="map"
+        )
+        
+        for point in self.candidate_points:
+            pose = Pose()
+            pose.position.x = point[0]
+            pose.position.y = point[1]
+            pose.position.z = 0.0
+            pose.orientation.w = 1.0  # 无旋转
+            pose_array.poses.append(pose)
+        
+        self.points_pub.publish(pose_array)
+        
+        # 获取当前发布模式
+        publish_mode = self.node.get_parameter('publish_mode').value
+        mode_info = "固定" if publish_mode == 'fixed' else "动态"
+        
+        # 仅在调试时记录日志，避免频繁输出
+        if self.node.get_clock().now().nanoseconds % 10 == 0:  # 每10次发布记录一次
+            self.node.get_logger().info(
+                f"发布 {len(self.candidate_points)} 个候选点到 /points_select ({mode_info}模式)"
+            )
+    
+    def generate_random_goal(self):
+        """从候选点中随机选择可达目标点"""
+        if not self.costmap_data or not self.candidate_points:
+            return None
+        
+        # 打乱候选点顺序
+        shuffled_points = self.candidate_points.copy()
+        random.shuffle(shuffled_points)
+        
+        # 查找第一个可通行的点
+        for point in shuffled_points:
+            # 将世界坐标转换为栅格坐标
+            resolution = self.costmap_data.info.resolution
+            origin_x = self.costmap_data.info.origin.position.x
+            origin_y = self.costmap_data.info.origin.position.y
+            
+            grid_x = int((point[0] - origin_x) / resolution)
+            grid_y = int((point[1] - origin_y) / resolution)
+            
+            # 检查是否可通行
+            if self.is_traversable(grid_x, grid_y):
+                return Point(x=point[0], y=point[1])
+        
+        return None
 
 class NavigationHandler:
     """导航处理和状态管理模块"""
@@ -239,8 +405,8 @@ class RandomGoalGenerator(Node):
         
         self.get_logger().info(f"使用代价地图话题: {costmap_topic}")
         
-        # 初始化模块
-        self.point_generator = RandomPointGenerator()
+        # 初始化模块 - 修复：传递当前节点实例
+        self.point_generator = RandomPointGenerator(self)  # 关键修复
         self.navigation_handler = NavigationHandler(self)
         
         # 订阅局部代价地图（使用参数化的话题名称）
