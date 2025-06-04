@@ -40,10 +40,10 @@ class OptimalPointSelector(Node):
         
         self.obstacle_sub = self.create_subscription(
             PoseArray,
-            '/obstacle_extractor',
+            '/global_obstacles',
             self.obstacle_callback,
             10)
-        self.get_logger().info("已订阅障碍物话题: /obstacle_extractor")
+        self.get_logger().info("已订阅障碍物话题: /global_obstacles")
         
         # 发布最优点
         self.best_point_pub = self.create_publisher(
@@ -51,6 +51,21 @@ class OptimalPointSelector(Node):
             '/optimal_point',
             10)
         self.get_logger().info("已创建最优点点话题: /optimal_point")
+        
+        # 新增：创建Point格式的最优点发布者
+        self.optimal_point_data_pub = self.create_publisher(
+            Point,
+            '/optimal_point_data',
+            10)
+        self.get_logger().info("已创建Point格式的最优点话题: /optimal_point_data")
+        
+        # 新增：订阅最优点的订阅者
+        self.optimal_point_sub = self.create_subscription(
+            PoseStamped,
+            '/optimal_point',
+            self.optimal_point_callback,
+            10)
+        self.get_logger().info("已订阅最优点话题: /optimal_point")
         
         # 存储障碍物点
         self.obstacle_points = []
@@ -83,6 +98,20 @@ class OptimalPointSelector(Node):
             for i, obs in enumerate(self.obstacle_points[:5]):
                 obstacle_info.append(f"障碍物{i+1}: ({obs.x:.2f}, {obs.y:.2f})")
             self.get_logger().info(f"障碍物位置(前5个): {'; '.join(obstacle_info)}")
+    
+    # 新增：最优点的回调函数
+    def optimal_point_callback(self, msg):
+        """最优点的回调函数 - 转换为Point格式发布"""
+        point_msg = Point()
+        point_msg.x = msg.pose.position.x
+        point_msg.y = msg.pose.position.y
+        point_msg.z = msg.pose.position.z
+        
+        self.optimal_point_data_pub.publish(point_msg)
+        self.get_logger().debug(
+            f"转换并发布Point格式的最优点: ({point_msg.x:.2f}, {point_msg.y:.2f}, {point_msg.z:.2f})",
+            throttle_duration_sec=1
+        )
     
     def points_callback(self, msg):
         """候选点数据回调"""
