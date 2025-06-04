@@ -3,11 +3,10 @@ import rclpy
 import time
 from rclpy.node import Node
 from rclpy.action import ActionClient
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy  # 修复QoS导入
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 from geometry_msgs.msg import Point, PoseStamped
 from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
-
 
 class EnhancedNavigationHandler:
     """增强版导航处理模块 - 支持动态目标点跟踪"""
@@ -24,9 +23,6 @@ class EnhancedNavigationHandler:
         self.failure_count = 0
         self.max_failures = 20  # 最大失败次数提高到20次
         self.active_goal = None  # 当前活跃目标点
-        self.latest_optimal_point = None  # 存储最新接收到的优化点
-        self.pending_goal = None  # 新增：待处理目标缓存
-        self.last_publish_time = 0.0
         
         # 创建Action客户端连接官方导航
         self.nav_client = ActionClient(
@@ -35,42 +31,39 @@ class EnhancedNavigationHandler:
             'navigate_to_pose'
         )
         
-        # ==== 关键修复：添加完整的QoS配置 ====
-        # Nav2要求TRANSIENT_LOCAL和RELIABLE的QoS配置 [6,7](@ref)
+        # QoS配置
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
             depth=10
         )
 
-        # 发布导航目标到官方话题 - 添加QoS参数
+        # 发布导航目标到官方话题
         self.goal_publisher = self.node.create_publisher(
             PoseStamped,
             '/goal_pose',
-            qos_profile  # 应用QoS配置
+            qos_profile
         )
             
-        # 订阅优化点话题 - 添加QoS参数
+        # 订阅优化点话题
         self.optimal_sub = self.node.create_subscription(
             Point,
             '/optimal_point_data',
             self.optimal_point_callback,
-            10  # QoS深度
+            10
         )
         
         self.node.get_logger().info("🚀 导航处理器初始化完成，等待最优目标点...")
     
     def optimal_point_callback(self, msg):
-        """处理优化点更新 - 增强状态处理逻辑"""
-        self.latest_optimal_point = msg
-        self.node.get_logger().info(f"📡 收到新优化点: x={msg.x:.2f}, y={msg.y:.2f}")
-        
-        # 状态处理优化
+        """处理优化点更新 - 仅在空闲状态保存并启动导航"""
+        # 关键修改：仅在空闲状态处理新目标
         if self.current_state == self.IDLE:
+            self.node.get_logger().info(f"📡 收到新优化点: x={msg.x:.2f}, y={msg.y:.2f}")
             self.start_navigation(msg)
         else:
-            self.pending_goal = msg  # 保存待处理目标
-            self.node.get_logger().info("⏳ 当前导航中，目标已缓存")
+            # 非空闲状态直接跳过，不保存目标点
+            self.node.get_logger().debug("⏩ 当前非空闲状态，跳过新目标点")
     
     def start_navigation(self, point):
         """启动新导航任务"""
@@ -81,24 +74,18 @@ class EnhancedNavigationHandler:
         self.current_state = self.NAVIGATING
     
     def publish_goal(self, point):
-        """发布导航目标（含5秒间隔控制）"""
-        # 频率控制（避免频繁发布）
-        current_time = time.time()
-        if current_time - self.last_publish_time < 5.0:
-            wait_time = 5.0 - (current_time - self.last_publish_time)
-            self.node.get_logger().info(f"⏱️ 等待 {wait_time:.2f} 秒后发布目标...")
-            time.sleep(wait_time)
-        
+        """发布导航目标（已删除5秒间隔控制）"""
         # 构造PoseStamped消息
         goal_msg = PoseStamped()
         goal_msg.header.stamp = self.node.get_clock().now().to_msg()
         goal_msg.header.frame_id = "map"
-        goal_msg.pose.position = point
+        goal_msg.pose.position.x = point.x
+        goal_msg.pose.position.y = point.y
+        goal_msg.pose.position.z = 0.0
         goal_msg.pose.orientation.w = 1.0  # 默认朝向
         
         # 发布到官方导航话题
         self.goal_publisher.publish(goal_msg)
-        self.last_publish_time = time.time()
         self.node.get_logger().info(f"📍 发布目标: x={point.x:.2f}, y={point.y:.2f}")
         
         # 通过Action发送导航请求
@@ -148,7 +135,7 @@ class EnhancedNavigationHandler:
             self.cancel_navigation()
     
     def nav_result_callback(self, future):
-        """处理导航结果 - 增强状态管理"""
+        """处理导航结果 - 重置状态"""
         try:
             result = future.result().result
             status = future.result().status
@@ -160,12 +147,8 @@ class EnhancedNavigationHandler:
                 self.node.get_logger().warn(f'⚠️ 导航失败，状态: {status_name}')
                 self.handle_failure()
             
-            # 关键修复：重置状态并检查待处理目标
+            # 关键修改：仅重置状态，不处理缓存目标
             self.reset_state()
-            if self.pending_goal:
-                self.node.get_logger().info("🔄 执行缓存的待处理目标")
-                self.start_navigation(self.pending_goal)
-                self.pending_goal = None
                 
         except Exception as e:
             self.node.get_logger().error(f"🚨 导航结果处理异常: {str(e)}")
@@ -190,7 +173,7 @@ class EnhancedNavigationHandler:
         
         if self.failure_count < self.max_failures:
             self.node.get_logger().info(f'🔄 导航失败，当前连续失败次数: {self.failure_count}/{self.max_failures}')
-            # 重新发布同一目标点
+            # 重新发布同一目标点（使用当前的active_goal）
             self.publish_goal(self.active_goal)
         else:
             self.node.get_logger().error(f'🚨 连续失败{self.max_failures}次，放弃当前目标')
@@ -207,7 +190,6 @@ class EnhancedNavigationHandler:
         """取消操作完成回调"""
         try:
             response = future.result()
-            # 修复：直接使用GoalStatus枚举
             if response.return_code == GoalStatus.STATUS_CANCELED:
                 self.node.get_logger().info("🛑 导航已成功取消")
             else:
