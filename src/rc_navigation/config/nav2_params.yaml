@@ -107,14 +107,14 @@ controller_server:
       vx_std: 0.5
       vy_std: 0.5
       wz_std: 0.3
-      vx_max: 3.0 # prediction horizon x vx_max = 3.0 m -->local costmap dim should larger than 3.0 x 2 = 6m
-      vx_min: -3.0 # Maximum reverse velocity (m/s).
-      vy_max: 3.8
-      wz_max: 2.8
-      ax_max: 4.0
+      ax_min: -4.0
+      ax_min: -4.0
       ax_may: 4.0
-      ax_min: -4.0
-      ax_min: -4.0
+      ax_max: 4.0
+      vx_max: 4.0 # prediction horizon x vx_max = 3.0 m -->local costmap dim should larger than 3.0 x 2 = 6m
+      vx_min: -4.0 # Maximum reverse velocity (m/s).
+      vy_max: 4.0
+      wz_max: 3.0
       iteration_count: 1 # Recommended to remain as 1 and instead prefer larger batch sizes.
       prune_distance: 7.0 # proportion to your maximum velocity and prediction horizon.
       transform_tolerance: 0.1 # Time tolerance for data transformations with TF (s).
@@ -398,10 +398,10 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [3.0, 3.0, 4.0] # 最大速度限制
-    min_velocity: [-3.0, -3.0, -4.0] # 最小速度限制
-    max_accel: [4.0, 4.0, 4.0] # 最大加速度限制
-    max_decel: [-4.0, -4.0, -4.0]
+    max_velocity: [4.0, 4.0, 5.0] # 最大速度限制
+    min_velocity: [-4.0, -4.0, 5.0] # 最小速度限制
+    max_accel: [2.0, 2.0, 2.0] # 最大加速度限制
+    max_decel: [-2.0, -2.0, -2.0]
     odom_topic: "odom"
     odom_duration: 0.1 # 里程计数据的有效期0.1秒
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
