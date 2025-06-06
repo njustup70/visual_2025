@@ -5,7 +5,6 @@ import math
 import numpy as np
 from geometry_msgs.msg import PoseArray, PoseStamped, Point
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType, SetParametersResult
-
 class OptimalPointSelector(Node):
     def __init__(self):
         super().__init__('optimal_point_selector')
