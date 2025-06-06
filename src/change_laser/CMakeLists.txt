@@ -19,7 +19,7 @@ ament_target_dependencies(laser_change_node
 
 # 创建可执行文件
 add_executable(obstacle_extractor_node
-  src/obstacle_extractor.cpp # 替换为你的源码路径
+  src/obstacle_extractor.cpp 
 )
 ament_target_dependencies(obstacle_extractor_node
   rclcpp
