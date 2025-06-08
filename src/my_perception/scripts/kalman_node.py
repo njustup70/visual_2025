@@ -10,6 +10,7 @@ from tf2_ros import TransformBroadcaster, TransformListener, Buffer
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 from EFK import FlexibleKalmanFilter
+
 class KalmanNode(Node):
     def __init__(self):
         super().__init__('kalman_node')
@@ -23,71 +24,54 @@ class KalmanNode(Node):
         self.dt = 1.0/self.get_parameter('hz').value
         self.last_time = self.get_clock().now()
         
-        # 状态向量 [x, y, yaw, vx, vy, vyaw, ax, ay, ayaw]
-        self.kf = FlexibleKalmanFilter(dim_x=9)
-        self.kf.x = np.zeros((9, 1))  # 初始化状态
+        # 状态向量 [x, y, yaw]
+        self.kf = FlexibleKalmanFilter(dim_x=3)
+        self.kf.x = np.zeros((3, 1))  # 初始化状态
         
-        # 构建状态转移矩阵（非线性情况）
-        self.kf.F = np.eye(9)
-        self.kf.F[0, 3] = self.dt  # x += vx*dt
-        self.kf.F[1, 4] = self.dt  # y += vy*dt
-        self.kf.F[2, 5] = self.dt  # yaw += vyaw*dt
-        self.kf.F[3, 6] = self.dt  # vx += ax*dt
-        self.kf.F[4, 7] = self.dt  # vy += ay*dt
-        self.kf.F[5, 8] = self.dt  # vyaw += ayaw*dt
+        # 构建状态转移矩阵
+        self.kf.F = np.zeros((3,3))
         
-        # 控制输入矩阵（速度指令到状态的映射）
-        self.B = np.array([
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0],
-            [1, 0, 0],
-            [0, 1, 0],
-            [0, 0, 1],
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0]
-        ])
+        # 控制输入矩阵
+        self.B= np.zeros((3, 3))
         self.kf.B = self.B
         
         # 测量矩阵 - 组合版本
         self.H = np.array([
-            [1, 0, 0, 0, 0, 0, 0, 0, 0],  # 测量x
-            [0, 1, 0, 0, 0, 0, 0, 0, 0],  # 测量y
-            [0, 0, 1, 0, 0, 0, 0, 0, 0],  # 测量yaw
-            [0, 0, 0, 0, 0, 0, 1, 0, 0],  # 测量ax
-            [0, 0, 0, 0, 0, 0, 0, 1, 0],  # 测量ay
-            [0, 0, 0, 0, 0, 0, 0, 0, 1]   # 测量ayaw
+            [1,0,0],
+            [0,1,0],
+            [0,0,1]
         ])
         self.kf.H = self.H
         
         # 过程噪声协方差矩阵（根据物理特性调整）
-        self.kf.Q = np.zeros((9, 9))
-        self.kf.Q[0:3, 0:3] = Q_discrete_white_noise(dim=3, dt=self.dt, var=0.01)  # 位置噪声
-        self.kf.Q[3:6, 3:6] = Q_discrete_white_noise(dim=3, dt=self.dt, var=0.1)   # 速度噪声
-        self.kf.Q[6:9, 6:9] = Q_discrete_white_noise(dim=3, dt=self.dt, var=1.0)   # 加速度噪声
+        self.kf.Q = np.zeros((3, 3))
+        self.kf.Q[0:3, 0:3] = Q_discrete_white_noise(dim=3, dt=self.dt, var=0.01)  # 位置和角度噪声
         
         # 测量噪声协方差矩阵（根据传感器精度调整）
         self.R_tf = np.diag([0.01, 0.01, 0.01])  # TF测量噪声（x,y,yaw）
         self.R_imu = np.diag([0.1, 0.1, 0.1])    # IMU测量噪声（ax,ay,ayaw）
         
         # 初始估计误差协方差
-        self.kf.P = np.eye(9) * 100.0
+        self.kf.P = np.eye(3) * 100.0
         
         # 控制输入和测量缓存
         self.cmd_vel = np.zeros(3)  # 控制输入[vx, vy, vyaw]
         self.odom = np.zeros(3)     # [x, y, yaw]
-        self.imu_data = np.zeros(3) # [ax, ay, ayaw]
+        self.odom_last = np.zeros(3)     # [x, y, yaw]
+        self.odom_d = np.zeros(3)     # [vx, vy, vyaw]观测值
+
+        # self.imu_data = np.zeros(3) # [ax, ay, ayaw]
         
         # 创建订阅者
         self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 1)
         self.create_subscription(TFMessage, '/tf', self.tf_callback, 1)
-        self.create_subscription(Imu, self.get_parameter('imu_topic').value, self.imu_callback, 1)
+        # self.create_subscription(Imu, self.get_parameter('imu_topic').value, self.imu_callback, 1)
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         # 创建定时器
         self.timer = self.create_timer(self.dt, self.timer_callback)
         self.tf_broadcaster = TransformBroadcaster(self)
+
     def cmd_vel_callback(self, msg: Twist):
         """处理速度指令"""
         self.cmd_vel[0] = msg.linear.x
@@ -119,7 +103,9 @@ class KalmanNode(Node):
         self.odom[2] = self.get_yaw_from_quaternion(
             rotation.x, rotation.y, rotation.z, rotation.w
         )
-        
+        self.odom_d = (self.odom - self.odom_last)/self.dt  # 计算速度观测值
+
+        self.odom_last = self.odom.copy()  # 保存上一次的odom值
         # 执行基于TF的更新
         self.update_tf()
         
@@ -139,13 +125,38 @@ class KalmanNode(Node):
         dt = (current_time - self.last_time).nanoseconds / 1e9
         self.last_time = current_time
         
-        # 更新状态转移矩阵中的dt
-        self.kf.F[0, 3] = dt
-        self.kf.F[1, 4] = dt
-        self.kf.F[2, 5] = dt
-        self.kf.F[3, 6] = dt
-        self.kf.F[4, 7] = dt
-        self.kf.F[5, 8] = dt
+        dt = self.dt  # 实际时间差
+        yaw = self.kf.x[2, 0]  # 使用卡尔曼滤波的状态估计值，而非观测值
+        vx = self.cmd_vel[0]    # 使用控制输入速度
+        vy = self.cmd_vel[1]
+        omega = self.cmd_vel[2]  # 控制输入角速度
+
+        # 恒速模型下的状态转移矩阵（假设平面运动，yaw为偏航角）
+        self.kf.F = np.array([
+            [1, 0, -vx*dt*np.sin(yaw) - vy*dt*np.cos(yaw)],  # x对yaw的导数
+            [1, 0,  vx*dt*np.cos(yaw) - vy*dt*np.sin(yaw)],  # y对yaw的导数
+            [0, 0, 1]
+        ])  # 简化示例，需根据实际模型调整
+
+        # 控制矩阵B（将控制输入[vx, vy, omega]映射到状态导数）
+        self.kf.B = np.array([
+            [dt*np.cos(yaw), -dt*np.sin(yaw), 0],
+            [dt*np.sin(yaw),  dt*np.cos(yaw), 0],
+            [0, 0, dt]
+        ])
+
+        # # 更新状态转移矩阵
+        # self.kf.F[0,2] = -self.odom_d[0]*np.sin(self.odom[0]) -self.odom_d[1]*np.cos(self.odom[2])
+        # self.kf.F[1,2] = self.odom_d[0]*np.cos(self.odom[0]) -self.odom_d[1]*np.sin(self.odom[2])
+
+        # self.kf.B[0,0] = np.cos(self.odom_d[2])
+        # self.kf.B[0,1] = -np.sin(self.odom_d[2])
+        # self.kf.B[1,0] = np.sin(self.odom_d[2])
+        # self.kf.B[1,1] = np.cos(self.odom_d[2])
+        # self.kf.B[2,2] = 1
+        
+        # self.kf.F = self.kf.F * dt
+        # self.kf.B = self.kf.F * dt
         
         # 执行预测步骤（考虑控制输入）
         self.kf.predict(u=self.cmd_vel.reshape(-1, 1))
@@ -162,11 +173,11 @@ class KalmanNode(Node):
             [self.odom[2]]
         ])
         
-        # 构建临时测量矩阵（只测量位置）
+        # 构建临时测量矩阵
         H_temp = np.array([
-            [1, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0, 0, 0]
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1]
         ])
         
         # 执行更新步骤
@@ -174,22 +185,22 @@ class KalmanNode(Node):
         
     def update_imu(self):
         """基于IMU数据更新滤波器"""
-        # 构建测量向量 [ax, ay, ayaw]
-        z = np.array([
-            [self.imu_data[0]],
-            [self.imu_data[1]],
-            [self.imu_data[2]]
-        ])
+        # # 构建测量向量 [ax, ay, ayaw]
+        # z = np.array([
+        #     [self.imu_data[0]],
+        #     [self.imu_data[1]],
+        #     [self.imu_data[2]]
+        # ])
         
-        # 构建临时测量矩阵（只测量加速度和角加速度）
-        H_temp = np.array([
-            [0, 0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1]
-        ])
+        # # 构建临时测量矩阵（只测量加速度和角加速度）
+        # H_temp = np.array([
+        #     [0, 0, 0, 0, 0, 0, 1, 0, 0],
+        #     [0, 0, 0, 0, 0, 0, 0, 1, 0],
+        #     [0, 0, 0, 0, 0, 0, 0, 0, 1]
+        # ])
         
-        # 执行更新步骤
-        self.kf.update(z, H=H_temp, R=self.R_imu)
+        # # 执行更新步骤
+        # self.kf.update(z, H=H_temp, R=self.R_imu)
         
     def publish_fused_state(self):
         """发布融合后的状态"""
