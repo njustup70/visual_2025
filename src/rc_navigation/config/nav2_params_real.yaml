@@ -150,7 +150,7 @@ controller_server:
         critical_weight: 30.0
         consider_footprint: false # turn on this can increase computation cost
         collision_cost: 30.0
-        collision_margin_distance: 0.30 # 0.05 # Margin distance (m) from collision to apply severe penalty, similar to footprint inflation. Between 0.05-0.2 is reasonable. Note that it will highly influence the controller not to enter spaces more confined than this, so ensure this parameter is set lower than the narrowest you expect the robot to need to traverse through.
+        collision_margin_distance: 0.50 # 0.05 # Margin distance (m) from collision to apply severe penalty, similar to footprint inflation. Between 0.05-0.2 is reasonable. Note that it will highly influence the controller not to enter spaces more confined than this, so ensure this parameter is set lower than the narrowest you expect the robot to need to traverse through.
         near_goal_distance: 0.20 # if the robot is within this distance of the goal, it will not be repelled by obstacles.
         inflation_radius: 0.80 # Radius to inflate costmap around lethal obstacles. This should be the same as for your inflation layer (Humble only)
         cost_scaling_factor: 2.0 # Exponential decay factor across inflation radius. This should be the same as for your inflation layer (Humble only)
@@ -236,7 +236,7 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True
         cost_scaling_factor: 2.0
-        inflation_radius: 0.5  
+        inflation_radius: 0.8 
       always_send_full_costmap: True # 始终发布完整地图
                         
 
