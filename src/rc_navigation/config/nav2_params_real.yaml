@@ -107,15 +107,15 @@ controller_server:
       vx_std: 0.5
       vy_std: 0.5
       wz_std: 0.6
-      vx_max: 3.0 # prediction horizon x vx_max = 3.0 m -->local costmap dim should larger than 3.0 x 2 = 6m
-      vx_min: -3.0 # Maximum reverse velocity (m/s).
-      vy_max: 3.8
-      wz_max: 2.8
+      vx_max: 1.0 # prediction horizon x vx_max = 3.0 m -->local costmap dim should larger than 3.0 x 2 = 6m
+      vx_min: -1.0 # Maximum reverse velocity (m/s).
+      vy_max: 1.0
+      wz_max: 1.0
       iteration_count: 1 # Recommended to remain as 1 and instead prefer larger batch sizes.
       prune_distance: 4.0 # proportion to your maximum velocity and prediction horizon.
       transform_tolerance: 0.1 # Time tolerance for data transformations with TF (s).
       temperature: 0.3 # 0 mean use control with best cost, huge value will lead to just taking mean of all trajectories without cost consideration.
-      gamma: 0.015 # A trade-off between smoothness (high) and low energy (low). This is a complex parameter that likely won’t need to be changed from the default.
+      gamma: 0.020 # A trade-off between smoothness (high) and low energy (low). This is a complex parameter that likely won’t need to be changed from the default.
       motion_model: "Omni"
       visualize: true # set to true to visualize the trajectories, but it will slow down the computation by a lot
       reset_period: 1.0 # Required time of inactivity to reset optimizer (only in Humble
