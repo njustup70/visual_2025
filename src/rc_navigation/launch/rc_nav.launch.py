@@ -20,7 +20,7 @@ def generate_launch_description():
     my_packager_share_dir = get_package_share_directory('rc_navigation')
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
     nav2_bringup_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([my_packager_share_dir, '/launch', '/navigation.launch.py']),
+        ([my_packager_share_dir, '/launch', '/navigation.launch.py']),
         launch_arguments={'use_sim_time': LaunchConfiguration('use_sim_time'),
                           'params_file': LaunchConfiguration('params_file')
                           }.items()
