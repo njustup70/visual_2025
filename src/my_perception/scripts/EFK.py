@@ -108,3 +108,4 @@ class FlexibleKalmanFilter:
         
         exponent = -0.5 * (y.T @ np.linalg.inv(S) @ y)
         return (1.0 / np.sqrt((2 * np.pi) ** n * det_S)) * np.exp(exponent[0, 0])
+    

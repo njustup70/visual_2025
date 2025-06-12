@@ -11,6 +11,46 @@ from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 from EFK import FlexibleKalmanFilter
 
+class ExponentialMovingAverageFilter:
+    def __init__(self, alpha=0.3):
+        """
+        指数加权移动平均滤波器
+        :param alpha: 平滑因子(0 < alpha < 1)，越小越平滑
+        """
+        self.alpha = alpha
+        self.filtered_value = None
+    
+    def update(self, new_value):
+        if self.filtered_value is None:
+            self.filtered_value = new_value
+        else:
+            self.filtered_value = self.alpha * new_value + (1 - self.alpha) * self.filtered_value
+        return self.filtered_value
+
+class MovingAverageFilter:
+    def __init__(self, window_size=5):
+        """
+        移动平均滤波器
+        :param window_size: 窗口大小，决定平滑程度
+        """
+        self.window_size = window_size
+        self.buffer = []
+
+    def update(self, new_value):
+        """
+        更新滤波值
+        :param new_value: 新输入值
+        :return: 滤波后的值
+        """
+        self.buffer.append(new_value)
+        if len(self.buffer) > self.window_size:
+            self.buffer.pop(0)
+        return sum(self.buffer) / len(self.buffer)
+
+    def reset(self):
+        """重置滤波器状态"""
+        self.buffer = []
+
 class KalmanNode(Node):
     def __init__(self):
         super().__init__('kalman_node')
@@ -24,6 +64,9 @@ class KalmanNode(Node):
         self.dt = 1.0/self.get_parameter('hz').value
         self.last_time = self.get_clock().now()
         
+        self.mf = MovingAverageFilter(window_size=10000)  # 初始化移动平均滤波器
+        self.ef = ExponentialMovingAverageFilter(alpha=0.2)  # 初始化移动平均滤波器
+
         # 状态向量 [x, y, yaw]
         self.kf = KalmanFilter(dim_x=8, dim_z=8)
         self.kf.x = np.zeros((8, 1))  # 默认初始化为0向量
@@ -64,7 +107,7 @@ class KalmanNode(Node):
         # 过程噪声协方差矩阵
         self.kf.Q = np.diag([0.001, 0.001, 0.006, 0.01, 0.01, 0.01,0.01, 0.01])
         # 测量噪声协方差矩阵
-        self.R = np.diag([0.03, 0.03, 0.08, 0.4, 0.4, 0.01 ,0.001, 0.001])
+        self.R = np.diag([0.001, 0.001, 0.08, 0.4, 0.4, 0.01 ,0.001, 0.001])
         
         # 测量噪声协方差矩阵（根据传感器精度调整）
         self.R_tf = np.diag([0.01, 0.01, 0.01])  # TF测量噪声（x,y,yaw）
@@ -153,6 +196,12 @@ class KalmanNode(Node):
         mat_u = np.array([0,0,0])
 
         self.kf.predict()
+
+        # 更新移动平均滤波器
+        self.mf.update(self.kf.x[0, 0])
+        self.mf.update(self.kf.x[1, 0])
+        # self.ef.update(self.kf.x[0, 0])
+        # self.ef.update(self.kf.x[1, 0])
         
         # 发布融合后的状态
         self.publish_fused_state()
