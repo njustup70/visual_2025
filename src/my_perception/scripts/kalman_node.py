@@ -39,8 +39,8 @@ class KalmanNode(Node):
             [0, 0, 0, 1, 0, 0, dt, 0],
             [0, 0, 0, 0, 1, 0, 0, dt],
             [0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0.8, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0.8],
+            [0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1],
         ])
         self.kf.F = np.copy(self.F)
         
@@ -62,9 +62,9 @@ class KalmanNode(Node):
         self.kf.H = self.H
         
         # 过程噪声协方差矩阵
-        self.kf.Q = np.diag([0.005, 0.005, 0.06, 0.01, 0.01, 0.01,0.01, 0.01])
+        self.kf.Q = np.diag([0.001, 0.001, 0.006, 0.01, 0.01, 0.01,0.01, 0.01])
         # 测量噪声协方差矩阵
-        self.R = np.diag([0.6, 0.6, 0.08, 0.7, 0.7, 0.01 ,0.9, 0.9])
+        self.R = np.diag([0.03, 0.03, 0.08, 0.4, 0.4, 0.01 ,0.001, 0.001])
         
         # 测量噪声协方差矩阵（根据传感器精度调整）
         self.R_tf = np.diag([0.01, 0.01, 0.01])  # TF测量噪声（x,y,yaw）
@@ -160,15 +160,18 @@ class KalmanNode(Node):
     def update_tf(self):
         """基于TF数据更新滤波器"""
         # 构建测量向量 {s} [px, py, theta, vx, vy, omega,ax,ay]
+        yaw = self.odom[2]
+        ax = self.imu_data[0]*np.cos(yaw) - self.imu_data[1]*np.sin(yaw)
+        ay = self.imu_data[0]*np.sin(yaw) + self.imu_data[1]*np.cos(yaw)
         z = np.array([
             [self.odom[0]],
             [self.odom[1]],
-            [self.odom[2]],
+            [yaw],
             [0],
             [0],
             [self.imu_data[2]],
-            [self.imu_data[0]],
-            [self.imu_data[1]]
+            [ax],
+            [ay]
         ])
         
         # 执行更新步骤
