@@ -63,7 +63,7 @@ class KalmanNode(Node):
         self.H[4,4]=0
         self.kf.H = self.H
         self.H_imu= np.zeros((3, 8))
-        self.H_imu[[0,1,2],[5,6,7]] = 1.0  # IMU测量 [ax, ay, ayaw] -> [vx, vy, omega]
+        self.H_imu[[0,1,2],[6,7,5]] = 1.0  # IMU测量 [ax, ay, vyaw] -> [ax, ay, omega]
         self.H_tf = np.zeros((3, 8))
         self.H_tf[[0,1,2],[0,1,2]] = 1.0  # TF测量 [px, py, yaw] -> [px, py, yaw]
         # 过程噪声协方差矩阵
@@ -72,8 +72,8 @@ class KalmanNode(Node):
         self.R = np.diag([0.001, 0.001, 0.08, 0.4, 0.4, 0.01 ,0.001, 0.001])
         
         # 测量噪声协方差矩阵（根据传感器精度调整）
-        self.R_tf = np.diag([0.01, 0.01, 0.01])  # TF测量噪声（x,y,yaw）
-        self.R_imu = np.diag([0.2, 0.2, 0.05])    # IMU测量噪声（ax,ay,ayaw）
+        self.R_tf = np.diag([1.0, 1.0, 1.0])  # TF测量噪声（x,y,yaw）
+        self.R_imu = np.diag([1.0, 1.0, 1.0])    # IMU测量噪声（ax,ay,ayaw）
         
         # 初始估计误差协方差
         self.kf.P = np.diag([0.1, 0.1, 0.01, 0.5, 0.5, 0.1, 1.0, 1.0])
@@ -117,10 +117,9 @@ class KalmanNode(Node):
         self.odom[2] = self.get_yaw_from_quaternion(
             rotation.x, rotation.y, rotation.z, rotation.w
         )
-        z=np.array([
-            [self.odom[0]],
-            [self.odom[1]],
-            [self.odom[2]]])
+        #现构造行再转化成列向量
+        z=np.array([self.odom[0], self.odom[1], self.odom[2]]).reshape(-1, 1)  # 简化后
+        # self.kf.update(z)
         self.kf.update(z, H=self.H_tf, R=self.R_tf)
         # 执行基于TF的更新
         # self.update_tf()
@@ -135,11 +134,7 @@ class KalmanNode(Node):
         ax = (self.imu_data[0]*np.cos(yaw) - self.imu_data[1]*np.sin(yaw))
         
         ay = (self.imu_data[0]*np.sin(yaw) + self.imu_data[1]*np.cos(yaw))
-        z= np.array([
-            [self.imu_data[2]],  # 角速度
-            [ax],  # x方向加速度
-            [ay]   # y方向加速度
-        ])
+        z = np.array([self.imu_data[2], ax, ay]).reshape(-1, 1)  # 简化后
         self.kf.update(z, H=self.H_imu, R=self.R_imu)
     def timer_callback(self):
         """定时器回调 - 执行预测步骤"""
