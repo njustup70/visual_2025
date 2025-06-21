@@ -134,7 +134,7 @@ class KalmanNode(Node):
         ax = (self.imu_data[0]*np.cos(yaw) - self.imu_data[1]*np.sin(yaw))
         
         ay = (self.imu_data[0]*np.sin(yaw) + self.imu_data[1]*np.cos(yaw))
-        z = np.array([self.imu_data[2], ax, ay]).reshape(-1, 1)  # 简化后
+        z = np.array([self.imu_data[2], self.imu_data[0], self.imu_data[1]]).reshape(-1, 1)  # 简化后
         self.kf.update(z, H=self.H_imu, R=self.R_imu)
     def timer_callback(self):
         """定时器回调 - 执行预测步骤"""
@@ -144,8 +144,19 @@ class KalmanNode(Node):
         self.last_time = current_time
         
         # dt = self.dt  # 实际时间差
-
-        self.kf.F = self.F.copy()  # 更新状态转移矩阵
+        yaw=self.kf.x[2, 0]  # 获取当前yaw角
+    
+        F=np.array([
+            [1, 0, 0, dt*np.cos(yaw), -dt*np.sin(yaw), 0, 0, 0],
+            [0, 1, 0, dt*np.sin(yaw), dt*np.cos(yaw), 0, 0, 0],
+            [0, 0, 1, 0, 0, dt, 0, 0],
+            [0, 0, 0, 1, 0, 0, dt, 0],
+            [0, 0, 0, 0, 1, 0, 0, dt],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+        ])
+        self.kf.F = F # 更新状态转移矩阵
 
         # 执行预测步骤（考虑控制输入）
         vx = self.cmd_vel[0]
