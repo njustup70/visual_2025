@@ -28,7 +28,8 @@ class KalmanNode(Node):
         self.ef = ExponentialMovingAverageFilter(alpha=0.2)  # 初始化移动平均滤波器
 
         # 状态向量 [x, y, yaw]
-        self.kf = KalmanFilter(dim_x=8, dim_z=8)
+        # self.kf = KalmanFilter(dim_x=8, dim_z=8)
+        self.kf = FlexibleKalmanFilter(dim_x=8)
         self.kf.x = np.zeros((8, 1))  # 默认初始化为0向量
         
         # 构建状态转移矩阵
@@ -101,36 +102,6 @@ class KalmanNode(Node):
         self.cmd_vel[1] = msg.linear.y
         self.cmd_vel[2] = msg.angular.z
         
-    def tf_callback(self, msg: TFMessage):
-        # print("tf_callback")
-        """处理TF消息"""
-        current_time = self.get_clock().now()
-        dt = (current_time - self.last_time).nanoseconds / 1e9
-        self.last_time = current_time
-
-        transform_temp = None
-        try:
-            transform_temp = self.tf_buffer.lookup_transform('odom', 'base_link',time=Time())
-        except Exception as e:
-            self.get_logger().error(f"TF lookup failed: {e}")
-            return
-        # 提取位置信息
-        translation = transform_temp.transform.translation
-        rotation = transform_temp.transform.rotation
-
-        # 保存x, y, yaw
-        self.odom[0] = translation.x
-        self.odom[1] = translation.y
-        self.odom[2] = self.get_yaw_from_quaternion(
-            rotation.x, rotation.y, rotation.z, rotation.w
-        )
-
-        # 更新数据
-        self.odom_d = (self.odom - self.odom_last)/dt  # 计算速度观测值
-        self.odom_last = self.odom.copy()  # 保存上一次的odom值
-
-        # 执行基于TF的更新
-        self.update_tf()
     def tf_timer_callback(self):
         try:
             transform_temp = self.tf_buffer.lookup_transform('odom', 'base_link',time=Time())

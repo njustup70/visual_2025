@@ -39,7 +39,8 @@ class FlexibleKalmanFilter:
         self.S = None  # 系统不确定性
         self.likelihood = None  # 似然度
         self.log_likelihood = None  # 对数似然度
-    
+        self.H = None  # 测量矩阵
+        self.R=None
     def predict(self, u=None):
         """
         预测步骤: 基于上一状态估计下一状态
@@ -58,7 +59,7 @@ class FlexibleKalmanFilter:
         
         return self.x.copy()
     
-    def update(self, z, H, R, check_valid=True):
+    def update(self, z, H=None, R=None, check_valid=True):
         """
         更新步骤: 融合预测状态和测量值
         
@@ -68,12 +69,19 @@ class FlexibleKalmanFilter:
             R: 测量噪声协方差矩阵 (dim_z, dim_z)
             check_valid: 是否检查输入维度有效性
         """
+        if H ==None:
+            H=self.H
+
+        if R is None:
+            if self.R is None:
+                self.R = np.eye(z.shape[0])  # 默认单位矩阵
+            R= self.R
         # 检查输入有效性
         if check_valid:
             dim_z = z.shape[0]
             assert H.shape == (dim_z, self.dim_x), f"H 矩阵形状错误，应为 ({dim_z}, {self.dim_x})"
             assert R.shape == (dim_z, dim_z), f"R 矩阵形状错误，应为 ({dim_z}, {dim_z})"
-        
+     
         # 计算残差 (测量与预测的差值)
         y = z - H @ self.x
         self.y = y
