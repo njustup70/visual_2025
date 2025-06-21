@@ -55,9 +55,9 @@ class KalmanNode(Node):
     def __init__(self):
         super().__init__('kalman_node')
         self.get_logger().info("Kalman滤波器节点已启动")
-        self.declare_parameter('imu_topic', '/imu_transformed')
+        self.declare_parameter('imu_topic', '/livox/imu/normal')
         self.declare_parameter('publish_tf_name', 'base_link_imu')
-        self.declare_parameter('hz',1000)
+        self.declare_parameter('hz',100)
         self.declare_parameter('kalman_model',0)
         
         # 时间参数
@@ -76,8 +76,8 @@ class KalmanNode(Node):
         dt = self.dt
         dt2 = 0.5 * dt * dt 
         self.F = np.array([
-            [1, 0, 0, dt, 0, 0, dt2, 0],
-            [0, 1, 0, 0, dt, 0, 0, dt2],
+            [1, 0, 0, dt, 0, 0, 0, 0],
+            [0, 1, 0, 0, dt, 0, 0, 0],
             [0, 0, 1, 0, 0, dt, 0, 0],
             [0, 0, 0, 1, 0, 0, dt, 0],
             [0, 0, 0, 0, 1, 0, 0, dt],
@@ -111,7 +111,7 @@ class KalmanNode(Node):
         
         # 测量噪声协方差矩阵（根据传感器精度调整）
         self.R_tf = np.diag([0.01, 0.01, 0.01])  # TF测量噪声（x,y,yaw）
-        self.R_imu = np.diag([0.1, 0.1, 0.1])    # IMU测量噪声（ax,ay,ayaw）
+        self.R_imu = np.diag([1.2, 1.2, 0.05])    # IMU测量噪声（ax,ay,ayaw）
         
         # 初始估计误差协方差
         self.kf.P = np.diag([0.1, 0.1, 0.01, 0.5, 0.5, 0.1, 1.0, 1.0])
@@ -126,11 +126,12 @@ class KalmanNode(Node):
         
         # 创建订阅者
         self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 1)
-        self.create_subscription(TFMessage, '/tf', self.tf_callback, 1)
+        # self.create_subscription(TFMessage, '/tf', self.tf_callback, 1)
         self.create_subscription(Imu, self.get_parameter('imu_topic').value, self.imu_callback, 1)
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         # 创建定时器
+        self.tf_timer=self.create_timer(1.0/300.0, self.tf_timer_callback)
         self.timer = self.create_timer(self.dt, self.timer_callback)
         self.tf_broadcaster = TransformBroadcaster(self)
 
@@ -141,6 +142,7 @@ class KalmanNode(Node):
         self.cmd_vel[2] = msg.angular.z
         
     def tf_callback(self, msg: TFMessage):
+        # print("tf_callback")
         """处理TF消息"""
         current_time = self.get_clock().now()
         dt = (current_time - self.last_time).nanoseconds / 1e9
@@ -169,9 +171,27 @@ class KalmanNode(Node):
 
         # 执行基于TF的更新
         self.update_tf()
-        
+    def tf_timer_callback(self):
+        try:
+            transform_temp = self.tf_buffer.lookup_transform('odom', 'base_link',time=Time())
+        except Exception as e:
+            self.get_logger().error(f"TF lookup failed: {e}")
+            return
+        # 提取位置信息
+        translation = transform_temp.transform.translation
+        rotation = transform_temp.transform.rotation
+
+        # 保存x, y, yaw
+        self.odom[0] = translation.x
+        self.odom[1] = translation.y
+        self.odom[2] = self.get_yaw_from_quaternion(
+            rotation.x, rotation.y, rotation.z, rotation.w
+        )
+        # 执行基于TF的更新
+        self.update_tf()
     def imu_callback(self, msg: Imu):
         """处理IMU消息"""
+        # print("imu_callback")
         # 提取加速度与角速度（转换为弧度）
         self.imu_data[0] = msg.linear_acceleration.x
         self.imu_data[1] = msg.linear_acceleration.y
@@ -180,6 +200,7 @@ class KalmanNode(Node):
         
     def timer_callback(self):
         """定时器回调 - 执行预测步骤"""
+        # print("Timer callback triggered")
         current_time = self.get_clock().now()
         dt = (current_time - self.last_time).nanoseconds / 1e9
         self.last_time = current_time
@@ -198,8 +219,8 @@ class KalmanNode(Node):
         self.kf.predict()
 
         # 更新移动平均滤波器
-        self.mf.update(self.kf.x[0, 0])
-        self.mf.update(self.kf.x[1, 0])
+        # self.mf.update(self.kf.x[0, 0])
+        # self.mf.update(self.kf.x[1, 0])
         # self.ef.update(self.kf.x[0, 0])
         # self.ef.update(self.kf.x[1, 0])
         
@@ -210,8 +231,10 @@ class KalmanNode(Node):
         """基于TF数据更新滤波器"""
         # 构建测量向量 {s} [px, py, theta, vx, vy, omega,ax,ay]
         yaw = self.odom[2]
-        ax = self.imu_data[0]*np.cos(yaw) - self.imu_data[1]*np.sin(yaw)
-        ay = self.imu_data[0]*np.sin(yaw) + self.imu_data[1]*np.cos(yaw)
+        ax = (self.imu_data[0]*np.cos(yaw) - self.imu_data[1]*np.sin(yaw))
+        
+        ay = (self.imu_data[0]*np.sin(yaw) + self.imu_data[1]*np.cos(yaw))
+        # print(f"ax: {ax}, ay: {ay}")
         z = np.array([
             [self.odom[0]],
             [self.odom[1]],
