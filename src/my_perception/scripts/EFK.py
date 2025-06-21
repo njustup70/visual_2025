@@ -109,3 +109,43 @@ class FlexibleKalmanFilter:
         exponent = -0.5 * (y.T @ np.linalg.inv(S) @ y)
         return (1.0 / np.sqrt((2 * np.pi) ** n * det_S)) * np.exp(exponent[0, 0])
     
+
+class ExponentialMovingAverageFilter:
+    def __init__(self, alpha=0.3):
+        """
+        指数加权移动平均滤波器
+        :param alpha: 平滑因子(0 < alpha < 1)，越小越平滑
+        """
+        self.alpha = alpha
+        self.filtered_value = None
+    
+    def update(self, new_value):
+        if self.filtered_value is None:
+            self.filtered_value = new_value
+        else:
+            self.filtered_value = self.alpha * new_value + (1 - self.alpha) * self.filtered_value
+        return self.filtered_value
+
+class MovingAverageFilter:
+    def __init__(self, window_size=5):
+        """
+        移动平均滤波器
+        :param window_size: 窗口大小，决定平滑程度
+        """
+        self.window_size = window_size
+        self.buffer = []
+
+    def update(self, new_value):
+        """
+        更新滤波值
+        :param new_value: 新输入值
+        :return: 滤波后的值
+        """
+        self.buffer.append(new_value)
+        if len(self.buffer) > self.window_size:
+            self.buffer.pop(0)
+        return sum(self.buffer) / len(self.buffer)
+
+    def reset(self):
+        """重置滤波器状态"""
+        self.buffer = []
