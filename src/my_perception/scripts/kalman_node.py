@@ -61,10 +61,11 @@ class KalmanNode(Node):
         self.H = np.identity(8)
         self.H[3,3]=0
         self.H[4,4]=0
-        # self.H[6,6]=0
-        # self.H[7,7]=0
         self.kf.H = self.H
-        
+        self.H_imu= np.zeros((3, 8))
+        self.H_imu[[0,1,2],[5,6,7]] = 1.0  # IMU测量 [ax, ay, ayaw] -> [vx, vy, omega]
+        self.H_tf = np.zeros((3, 8))
+        self.H_tf[[0,1,2],[0,1,2]] = 1.0  # TF测量 [px, py, yaw] -> [px, py, yaw]
         # 过程噪声协方差矩阵
         self.kf.Q = np.diag([0.001, 0.001, 0.006, 0.01, 0.01, 0.01,0.01, 0.01])
         # 测量噪声协方差矩阵
@@ -72,7 +73,7 @@ class KalmanNode(Node):
         
         # 测量噪声协方差矩阵（根据传感器精度调整）
         self.R_tf = np.diag([0.01, 0.01, 0.01])  # TF测量噪声（x,y,yaw）
-        self.R_imu = np.diag([1.2, 1.2, 0.05])    # IMU测量噪声（ax,ay,ayaw）
+        self.R_imu = np.diag([0.2, 0.2, 0.05])    # IMU测量噪声（ax,ay,ayaw）
         
         # 初始估计误差协方差
         self.kf.P = np.diag([0.1, 0.1, 0.01, 0.5, 0.5, 0.1, 1.0, 1.0])
@@ -80,8 +81,6 @@ class KalmanNode(Node):
         # 控制输入和测量缓存
         self.cmd_vel = np.zeros(3)  # 控制输入[vx, vy, vyaw]
         self.odom = np.zeros(3)     # [x, y, yaw]
-        self.odom_last = np.zeros(3)     # [x, y, yaw]
-        self.odom_d = np.zeros(3)     # [vx, vy, vyaw]观测值
         self.imu_data = [0.0,0.0,0.0]
         # self.imu_data = np.zeros(3) # [ax, ay, ayaw]
         
@@ -118,8 +117,13 @@ class KalmanNode(Node):
         self.odom[2] = self.get_yaw_from_quaternion(
             rotation.x, rotation.y, rotation.z, rotation.w
         )
+        z=np.array([
+            [self.odom[0]],
+            [self.odom[1]],
+            [self.odom[2]]])
+        self.kf.update(z, H=self.H_tf, R=self.R_tf)
         # 执行基于TF的更新
-        self.update_tf()
+        # self.update_tf()
     def imu_callback(self, msg: Imu):
         """处理IMU消息"""
         # print("imu_callback")
@@ -127,8 +131,16 @@ class KalmanNode(Node):
         self.imu_data[0] = msg.linear_acceleration.x
         self.imu_data[1] = msg.linear_acceleration.y
         self.imu_data[2] = msg.angular_velocity.z  # 已经是rad/s
+        yaw = self.odom[2]
+        ax = (self.imu_data[0]*np.cos(yaw) - self.imu_data[1]*np.sin(yaw))
         
-        
+        ay = (self.imu_data[0]*np.sin(yaw) + self.imu_data[1]*np.cos(yaw))
+        z= np.array([
+            [self.imu_data[2]],  # 角速度
+            [ax],  # x方向加速度
+            [ay]   # y方向加速度
+        ])
+        self.kf.update(z, H=self.H_imu, R=self.R_imu)
     def timer_callback(self):
         """定时器回调 - 执行预测步骤"""
         # print("Timer callback triggered")
@@ -157,29 +169,7 @@ class KalmanNode(Node):
         
         # 发布融合后的状态
         self.publish_fused_state()
-                
-    def update_tf(self):
-        """基于TF数据更新滤波器"""
-        # 构建测量向量 {s} [px, py, theta, vx, vy, omega,ax,ay]
-        yaw = self.odom[2]
-        ax = (self.imu_data[0]*np.cos(yaw) - self.imu_data[1]*np.sin(yaw))
-        
-        ay = (self.imu_data[0]*np.sin(yaw) + self.imu_data[1]*np.cos(yaw))
-        # print(f"ax: {ax}, ay: {ay}")
-        z = np.array([
-            [self.odom[0]],
-            [self.odom[1]],
-            [yaw],
-            [0],
-            [0],
-            [self.imu_data[2]],
-            [ax],
-            [ay]
-        ])
-        
-        # 执行更新步骤
-        self.kf.update(z)
-        
+                        
         
     def publish_fused_state(self):
         """发布融合后的状态"""

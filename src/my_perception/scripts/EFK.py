@@ -69,7 +69,7 @@ class FlexibleKalmanFilter:
             R: 测量噪声协方差矩阵 (dim_z, dim_z)
             check_valid: 是否检查输入维度有效性
         """
-        if H ==None:
+        if H is None:
             H=self.H
 
         if R is None:
