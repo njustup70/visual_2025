@@ -1,0 +1,36 @@
+/random_generate:  # RandomPointGenerator节点命名空间
+  ros__parameters:
+    coordinate_precision: "high"
+    decimal_places: 1
+    map_x: 7.0
+    map_y: -14.0
+    origin_x: 0.0
+    origin_y: 0.0
+    radius_min: 3.0
+    radius_max: 4.0
+    num_points: 36
+    safety_distance: 0.5
+    publish_mode: "fixed"
+    continuous_publish: true
+    publish_frequency: 2.0
+    half_circle: true
+    min_generation_interval: 0.5
+
+/optimal_point_selector:  # OptimalPointSelector节点命名空间
+  ros__parameters:
+    refer_point_x: 3.5
+    refer_point_y: 0.0
+    comd_r: 2.5
+    a: 1.0
+    b: 1.0
+    c: 1.0
+    max_diff: 3.0
+
+/obstacle_extractor:  # ObstacleExtractor节点命名空间
+  ros__parameters:
+    costmap_topic: "/local_costmap/costmap"
+
+/optimal_goal_navigator:  # OptimalGoalNavigator节点命名空间
+  ros__parameters:
+    goal_timeout: 60.0
+    max_failures: 20
