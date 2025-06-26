@@ -15,9 +15,9 @@ public:
         // 声明动态参数（含区域过滤参数）
         this->declare_parameter("costmap_topic", "/local_costmap/costmap");
         this->declare_parameter("region_origin_x", 0.0);    // 区域原点X
-        this->declare_parameter("region_origin_y", -7.5);    // 区域原点Y
-        this->declare_parameter("region_width", 7.5);       // 区域宽度（默认覆盖全图）
-        this->declare_parameter("region_height", 14.5);      // 区域高度（默认覆盖全图）
+        this->declare_parameter("region_origin_y", -7.5);  // 区域原点Y
+        this->declare_parameter("region_xlength", 7.5);    // X方向长度（可正可负）
+        this->declare_parameter("region_ylength", 14.5);   // Y方向长度（可正可负）
         update_parameters();
 
         // 初始化订阅器和发布器
@@ -38,17 +38,20 @@ private:
         costmap_topic_ = this->get_parameter("costmap_topic").as_string();
         region_origin_x_ = this->get_parameter("region_origin_x").as_double();
         region_origin_y_ = this->get_parameter("region_origin_y").as_double();
-        region_width_ = this->get_parameter("region_width").as_double();
-        region_height_ = this->get_parameter("region_height").as_double();
+        region_xlength_ = this->get_parameter("region_xlength").as_double();
+        region_ylength_ = this->get_parameter("region_ylength").as_double();
+        
+        recreate_subscription();
     }
 
     void recreate_subscription()
     {
+        if (costmap_sub_) {
+            costmap_sub_.reset(); // 先释放旧订阅
+        }
         costmap_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
             costmap_topic_, 10,
-            [this](const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
-                costmap_callback(msg);
-            });
+            std::bind(&ObstacleExtractor::costmap_callback, this, std::placeholders::_1));
     }
 
     void costmap_callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
@@ -63,11 +66,20 @@ private:
         const uint32_t width = msg->info.width;
         const uint32_t height = msg->info.height;
 
-        // 计算矩形边界[6](@ref)
-        const double region_x_min = region_origin_x_;
-        const double region_x_max = region_origin_x_ + region_width_;
-        const double region_y_min = region_origin_y_;
-        const double region_y_max = region_origin_y_ + region_height_;
+        // 根据参数计算有效的矩形区域 [支持负值区域]-----------------
+        const double region_x_min = (region_xlength_ >= 0) ? 
+                                    region_origin_x_ : 
+                                    region_origin_x_ + region_xlength_;
+        const double region_x_max = (region_xlength_ >= 0) ? 
+                                    region_origin_x_ + region_xlength_ : 
+                                    region_origin_x_;
+        const double region_y_min = (region_ylength_ >= 0) ? 
+                                    region_origin_y_ : 
+                                    region_origin_y_ + region_ylength_;
+        const double region_y_max = (region_ylength_ >= 0) ? 
+                                    region_origin_y_ + region_ylength_ : 
+                                    region_origin_y_;
+        // -----------------------------------------------------
 
         bool has_obstacles = false;
         for (uint32_t idx = 0; idx < data.size(); ++idx)
@@ -77,11 +89,11 @@ private:
                 const uint32_t i = idx / width; // 行索引
                 const uint32_t j = idx % width; // 列索引
 
-                // 计算地图坐标系下的坐标[2](@ref)
+                // 计算地图坐标系下的坐标
                 const double x = ox + (j + 0.5) * res;
                 const double y = oy + (i + 0.5) * res;
 
-                // 区域过滤检查
+                // 区域过滤检查 [支持任意方向矩形区域]
                 if (x >= region_x_min && x <= region_x_max && 
                     y >= region_y_min && y <= region_y_max)
                 {
@@ -98,9 +110,9 @@ private:
         if (has_obstacles) {
             clear_count_ = 0;
             obstacle_pub_->publish(obstacles);
-            RCLCPP_INFO(this->get_logger(), "发布 %ld 个障碍点 | 区域: (%.1f,%.1f)~%.1fx%.1f", 
+            RCLCPP_INFO(this->get_logger(), "发布 %ld 个障碍点 | 区域: (%.2f,%.2f)~(%.2f,%.2f)", 
                         obstacles.poses.size(), region_x_min, region_y_min, 
-                        region_width_, region_height_);
+                        region_x_max, region_y_max);
             print_obstacle_info(obstacles, res, width, height);
         } else {
             if (++clear_count_ >= 5) {
@@ -135,36 +147,63 @@ private:
         RCLCPP_DEBUG(this->get_logger(), "==============================");
     }
 
-    // 参数回调函数（支持动态更新区域）[6](@ref)
+    // 参数回调函数（支持动态更新区域）
     rcl_interfaces::msg::SetParametersResult param_callback(
         const std::vector<rclcpp::Parameter> &params)
     {
         auto result = rcl_interfaces::msg::SetParametersResult();
         result.successful = true;
 
+        bool need_update_sub = false;
+        bool need_log_region = false;
+        
         for (const auto &param : params) {
             if (param.get_name() == "costmap_topic") {
                 costmap_topic_ = param.as_string();
-                recreate_subscription();
-                RCLCPP_INFO(this->get_logger(), "切换话题至: %s", costmap_topic_.c_str());
+                need_update_sub = true;
+                RCLCPP_INFO(this->get_logger(), "更新话题: %s", costmap_topic_.c_str());
             }
             else if (param.get_name() == "region_origin_x") {
                 region_origin_x_ = param.as_double();
+                need_log_region = true;
                 RCLCPP_INFO(this->get_logger(), "更新区域原点X: %.2f", region_origin_x_);
             }
             else if (param.get_name() == "region_origin_y") {
                 region_origin_y_ = param.as_double();
+                need_log_region = true;
                 RCLCPP_INFO(this->get_logger(), "更新区域原点Y: %.2f", region_origin_y_);
             }
-            else if (param.get_name() == "region_width") {
-                region_width_ = param.as_double();
-                RCLCPP_INFO(this->get_logger(), "更新区域宽度: %.2f", region_width_);
+            else if (param.get_name() == "region_xlength") {
+                region_xlength_ = param.as_double();
+                need_log_region = true;
+                RCLCPP_INFO(this->get_logger(), "更新X长度: %.2f (方向: %s)",
+                            region_xlength_, 
+                            (region_xlength_ >= 0) ? "正方向" : "负方向");
             }
-            else if (param.get_name() == "region_height") {
-                region_height_ = param.as_double();
-                RCLCPP_INFO(this->get_logger(), "更新区域高度: %.2f", region_height_);
+            else if (param.get_name() == "region_ylength") {
+                region_ylength_ = param.as_double();
+                need_log_region = true;
+                RCLCPP_INFO(this->get_logger(), "更新Y长度: %.2f (方向: %s)",
+                            region_ylength_, 
+                            (region_ylength_ >= 0) ? "正方向" : "负方向");
             }
         }
+
+        // 更新后打印区域信息
+        if (need_log_region) {
+            const double x_min = (region_xlength_ >= 0) ? region_origin_x_ : region_origin_x_ + region_xlength_;
+            const double x_max = (region_xlength_ >= 0) ? region_origin_x_ + region_xlength_ : region_origin_x_;
+            const double y_min = (region_ylength_ >= 0) ? region_origin_y_ : region_origin_y_ + region_ylength_;
+            const double y_max = (region_ylength_ >= 0) ? region_origin_y_ + region_ylength_ : region_origin_y_;
+            
+            RCLCPP_INFO(this->get_logger(), "当前有效区域: X(%.2f ~ %.2f), Y(%.2f ~ %.2f)",
+                        x_min, x_max, y_min, y_max);
+        }
+        
+        if (need_update_sub) {
+            recreate_subscription();
+        }
+
         return result;
     }
 
@@ -175,11 +214,11 @@ private:
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_;
     int clear_count_;
     
-    // 区域过滤参数
+    // 区域过滤参数 (支持负值)
     double region_origin_x_;
     double region_origin_y_;
-    double region_width_;
-    double region_height_;
+    double region_xlength_; // 可正可负，表示延伸方向和长度
+    double region_ylength_; // 可正可负，表示延伸方向和长度
 };
 
 int main(int argc, char **argv)
