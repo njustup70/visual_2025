@@ -15,9 +15,9 @@ public:
         // 声明动态参数（含区域过滤参数）
         this->declare_parameter("costmap_topic", "/local_costmap/costmap");
         this->declare_parameter("region_origin_x", 0.0);    // 区域原点X
-        this->declare_parameter("region_origin_y", 0.0);    // 区域原点Y
-        this->declare_parameter("region_width", 1e6);       // 区域宽度（默认覆盖全图）
-        this->declare_parameter("region_height", 1e6);      // 区域高度（默认覆盖全图）
+        this->declare_parameter("region_origin_y", -7.5);    // 区域原点Y
+        this->declare_parameter("region_width", 7.5);       // 区域宽度（默认覆盖全图）
+        this->declare_parameter("region_height", 14.5);      // 区域高度（默认覆盖全图）
         update_parameters();
 
         // 初始化订阅器和发布器
