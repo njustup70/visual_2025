@@ -131,7 +131,7 @@ controller_server:
       GoalAngleCritic: # 当机器人距离目标点较近时，鼓励它调整角度朝向目标的朝向
         cost_weight: 8.0
         threshold_to_consider: 3.0 #距离三米开始对齐
-      GoalCritic: 鼓励机器人靠近最终目标位置
+      GoalCritic: #鼓励机器人靠近最终目标位置
         enabled: true
         cost_power: 1
         cost_weight: 5.0
@@ -273,7 +273,7 @@ global_costmap:
       update_frequency: 10.0
       publish_frequency: 10.0
       static_map: true         # 依赖静态地图(新增)
-      global_frame: map
+      global_frame: odom
       robot_base_frame: base_link
       transform_tolerance: 1.0 # 坐标变换容忍时间
       use_sim_time: false
@@ -312,7 +312,7 @@ global_costmap:
 
 map_server:
   ros__parameters:
-    global_frame: map
+    global_frame: odom
     use_sim_time: false
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
@@ -426,7 +426,5 @@ velocity_smoother:
     min_velocity: [-3.0, -3.0, -4.0] # 最小速度限制
     max_accel: [2.0, 2.0, 2.0] # 最大加速度限制
     max_decel: [-2.0, -2.0, -2.0]
-    odom_topic: "odom"
-    odom_duration: 0.1 # 里程计数据的有效期0.1秒
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
     velocity_timeout: 1.0
