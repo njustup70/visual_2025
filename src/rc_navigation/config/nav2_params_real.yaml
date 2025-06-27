@@ -72,7 +72,7 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 20.0
+    controller_frequency: 40.0
     min_x_velocity_threshold: 0.005
     min_y_velocity_threshold: 0.005
     min_theta_velocity_threshold: 0.01
@@ -128,15 +128,14 @@ controller_server:
       # AckermannConstraints:
       #   min_turning_r: 0.2
       critics: ["ObstaclesCritic", "GoalCritic", "PathAlignCritic", "PathFollowCritic", "TwirlingCritic","GoalAngleCritic"]
-      GoalAngleCritic:
+      GoalAngleCritic: # 当机器人距离目标点较近时，鼓励它调整角度朝向目标的朝向
         cost_weight: 8.0
         threshold_to_consider: 3.0 #距离三米开始对齐
-      GoalCritic:
+      GoalCritic: 鼓励机器人靠近最终目标位置
         enabled: true
         cost_power: 1
         cost_weight: 5.0
-        threshold_to_consider: 1.5 # Minimal distance (m) between robot and goal above which goal distance cost considered. It is wise to start with this as being the same as your prediction horizon to have a clean hand-off with the path follower critic.
-        # i.e. When this critic is add to the cost function
+        threshold_to_consider: 1.5 # 超过1.5米时才会被纳入评分考虑，防止它在离目标太远时被目标吸引，反而忽视路径或避障
       PreferForwardCritic: # moving in the forward direction, rather than reversing.
         enabled: false
         cost_power: 1
@@ -150,7 +149,7 @@ controller_server:
         critical_weight: 30.0
         consider_footprint: false # turn on this can increase computation cost
         collision_cost: 30.0
-        collision_margin_distance: 0.50 # 0.05 # Margin distance (m) from collision to apply severe penalty, similar to footprint inflation. Between 0.05-0.2 is reasonable. Note that it will highly influence the controller not to enter spaces more confined than this, so ensure this parameter is set lower than the narrowest you expect the robot to need to traverse through.
+        collision_margin_distance: 0.50 # 进入 collision_margin_distance 范围内会极大地惩罚，防止靠太近
         near_goal_distance: 0.20 # if the robot is within this distance of the goal, it will not be repelled by obstacles.
         inflation_radius: 0.80 # Radius to inflate costmap around lethal obstacles. This should be the same as for your inflation layer (Humble only)
         cost_scaling_factor: 2.0 # Exponential decay factor across inflation radius. This should be the same as for your inflation layer (Humble only)
