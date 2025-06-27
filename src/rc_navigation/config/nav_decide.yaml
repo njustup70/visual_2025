@@ -28,7 +28,11 @@
 
 /obstacle_extractor:  # ObstacleExtractor节点命名空间
   ros__parameters:
-    costmap_topic: "/local_costmap/costmap"
+    costmap_topic: "/local_costmap/costmap"  # 默认值，可被launch文件覆盖
+    region_origin_x: 0.0
+    region_origin_y: 0.0
+    region_xlength: 14.5
+    region_ylength: -7.0
 
 /optimal_goal_navigator:  # OptimalGoalNavigator节点命名空间
   ros__parameters:
