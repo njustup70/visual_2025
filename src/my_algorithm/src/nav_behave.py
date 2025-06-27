@@ -7,9 +7,11 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 from geometry_msgs.msg import Point, PoseStamped
 from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
+from rcl_interfaces.msg import SetParametersResult
+from rclpy.parameter import Parameter
 
 class EnhancedNavigationHandler:
-    """增强版导航处理模块 - 支持动态目标点跟踪"""
+    """增强版导航处理模块 - 支持动态目标点跟踪和参数动态调整"""
     IDLE = 0          # 空闲状态，等待新目标
     NAVIGATING = 1    # 导航中状态
     RETRYING = 2      # 重试状态
@@ -18,13 +20,22 @@ class EnhancedNavigationHandler:
         self.node = node
         self.current_state = self.IDLE
         self.current_goal_handle = None
-        self.goal_timeout = 60.0
         self.last_goal_time = 0.0
         self.failure_count = 0
-        self.max_failures = 20  # 最大失败次数提高到20次
-        self.active_goal = None  # 当前活跃目标点
+        self.active_goal = None
+
+        # 声明动态参数（带默认值）
+        self.node.declare_parameter('max_failures', 20)
+        self.node.declare_parameter('goal_timeout', 60.0)
         
-        # 创建Action客户端连接官方导航
+        # 注册参数回调
+        self.node.add_on_set_parameters_callback(self.parameters_callback)
+        
+        # 初始化参数值
+        self.max_failures = self.node.get_parameter('max_failures').value
+        self.goal_timeout = self.node.get_parameter('goal_timeout').value
+        
+        # 创建Action客户端
         self.nav_client = ActionClient(
             self.node, 
             NavigateToPose, 
@@ -38,7 +49,7 @@ class EnhancedNavigationHandler:
             depth=10
         )
 
-        # 发布导航目标到官方话题
+        # 发布导航目标
         self.goal_publisher = self.node.create_publisher(
             PoseStamped,
             '/goal_pose',
@@ -53,16 +64,28 @@ class EnhancedNavigationHandler:
             10
         )
         
-        self.node.get_logger().info("🚀 导航处理器初始化完成，等待最优目标点...")
+        self.node.get_logger().info(
+            f"🚀 导航处理器初始化完成 | max_failures={self.max_failures} | goal_timeout={self.goal_timeout}s"
+        )
     
+    def parameters_callback(self, params):
+        """处理参数变化的回调函数"""
+        result = SetParametersResult(successful=True)
+        for param in params:
+            if param.name == 'max_failures':
+                self.max_failures = param.value
+                self.node.get_logger().info(f"📌 更新 max_failures = {self.max_failures}")
+            elif param.name == 'goal_timeout':
+                self.goal_timeout = param.value
+                self.node.get_logger().info(f"⏱️ 更新 goal_timeout = {self.goal_timeout}s")
+        return result
+
     def optimal_point_callback(self, msg):
         """处理优化点更新 - 仅在空闲状态保存并启动导航"""
-        # 关键修改：仅在空闲状态处理新目标
         if self.current_state == self.IDLE:
             self.node.get_logger().info(f"📡 收到新优化点: x={msg.x:.2f}, y={msg.y:.2f}")
             self.start_navigation(msg)
         else:
-            # 非空闲状态直接跳过，不保存目标点
             self.node.get_logger().debug("⏩ 当前非空闲状态，跳过新目标点")
     
     def start_navigation(self, point):
@@ -74,31 +97,26 @@ class EnhancedNavigationHandler:
         self.current_state = self.NAVIGATING
     
     def publish_goal(self, point):
-        """发布导航目标（已删除5秒间隔控制）"""
-        # 构造PoseStamped消息
+        """发布导航目标"""
         goal_msg = PoseStamped()
         goal_msg.header.stamp = self.node.get_clock().now().to_msg()
         goal_msg.header.frame_id = "map"
         goal_msg.pose.position.x = point.x
         goal_msg.pose.position.y = point.y
         goal_msg.pose.position.z = 0.0
-        goal_msg.pose.orientation.w = 1.0  # 默认朝向
+        goal_msg.pose.orientation.w = 1.0
         
-        # 发布到官方导航话题
         self.goal_publisher.publish(goal_msg)
         self.node.get_logger().info(f"📍 发布目标: x={point.x:.2f}, y={point.y:.2f}")
         
-        # 通过Action发送导航请求
         nav_goal = NavigateToPose.Goal()
         nav_goal.pose = goal_msg
         
-        # 确保Action服务器可用 - 添加超时机制
         if not self.nav_client.wait_for_server(timeout_sec=5.0):
-            self.node.get_logger().error("🚨 导航服务器连接超时，跳过本次导航")
+            self.node.get_logger().error("🚨 导航服务器连接超时")
             self.reset_state()
             return
         
-        # 发送目标并设置回调
         send_goal_future = self.nav_client.send_goal_async(
             nav_goal, 
             feedback_callback=self.nav_feedback_callback
@@ -106,7 +124,7 @@ class EnhancedNavigationHandler:
         send_goal_future.add_done_callback(self.goal_response_callback)
     
     def goal_response_callback(self, future):
-        """处理目标响应 - 添加错误处理"""
+        """处理目标响应"""
         try:
             goal_handle = future.result()
             if not goal_handle.accepted:
@@ -125,17 +143,15 @@ class EnhancedNavigationHandler:
     def nav_feedback_callback(self, feedback_msg):
         """处理导航反馈（检查超时）"""
         current_time = time.time()
-        # 添加反馈信息日志
         remaining_distance = feedback_msg.feedback.distance_remaining
         self.node.get_logger().info(f"📏 剩余距离: {remaining_distance:.2f}米")
         
-        # 超时检查
         if current_time - self.last_goal_time > self.goal_timeout:
             self.node.get_logger().warn("⏰ 导航超时，取消当前任务")
             self.cancel_navigation()
     
     def nav_result_callback(self, future):
-        """处理导航结果 - 重置状态"""
+        """处理导航结果"""
         try:
             result = future.result().result
             status = future.result().status
@@ -147,7 +163,6 @@ class EnhancedNavigationHandler:
                 self.node.get_logger().warn(f'⚠️ 导航失败，状态: {status_name}')
                 self.handle_failure()
             
-            # 关键修改：仅重置状态，不处理缓存目标
             self.reset_state()
                 
         except Exception as e:
@@ -173,7 +188,6 @@ class EnhancedNavigationHandler:
         
         if self.failure_count < self.max_failures:
             self.node.get_logger().info(f'🔄 导航失败，当前连续失败次数: {self.failure_count}/{self.max_failures}')
-            # 重新发布同一目标点（使用当前的active_goal）
             self.publish_goal(self.active_goal)
         else:
             self.node.get_logger().error(f'🚨 连续失败{self.max_failures}次，放弃当前目标')
@@ -200,7 +214,7 @@ class EnhancedNavigationHandler:
             self.handle_failure()
     
     def reset_state(self):
-        """重置状态为空闲 - 增强可靠性"""
+        """重置状态为空闲"""
         self.current_state = self.IDLE
         self.current_goal_handle = None
         self.failure_count = 0
