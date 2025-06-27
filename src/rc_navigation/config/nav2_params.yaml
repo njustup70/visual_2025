@@ -104,7 +104,8 @@ controller_server:
       adjustHeadingSpeed: 0.2 # angular speed to adjust heading
       enforce_path_inversion: false #1
       max_robot_pose_search_dist: 3.5 #1
-      # 
+  
+
       time_steps: 40 #1 # prediction horizon = time_steps x model_dt = 3s
       model_dt: 0.05 #1 # =1/controller_frequency
       batch_size: 3000  #1 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
@@ -125,6 +126,7 @@ controller_server:
       reset_period: 1.0 #1 # Required time of inactivity to reset optimizer (only in Humble
       regenerate_noises: false  #1
       retry_attempt_limit: 3 #1 # Number of attempts to find feasible trajectory on failure for soft-resets before reporting total failure.
+
       publish_optimal_trajectory: true  #发布调试信息
       TrajectoryVisualizer:
         trajectory_step: 5  #1
@@ -180,6 +182,7 @@ controller_server:
         cost_weight: 8.0  #1
         offset_from_furthest: 10  #1 # 13 # Number of path points after furthest one any trajectory achieves to drive path tracking relative to.
         threshold_to_consider: 1.5  #1 # That is to say, path following will be considered until the robot is within this distance of the goal, at which point the goal critic will take over.
+
       PathAngleCritic: # This critic penalizes trajectories at a high relative angle to the path. This helps the robot make sharp turns when necessary due to large accumulated angular errors.
         enabled: false  
         cost_power: 1
@@ -254,6 +257,7 @@ local_costmap:
 
       always_send_full_costmap: True #1 # 始终发布完整地图
 
+
 global_costmap:
   global_costmap:
     ros__parameters:
@@ -298,6 +302,7 @@ global_costmap:
           data_type: "LaserScan"
           obstacle_max_range: 14.0  #1
           obstacle_min_range: 0.0 #1
+
 
       # obstacle_layer: # 启用的地图层级，按顺序叠加（静态层 → 障碍层 → 膨胀层）但不需要障碍层似乎
       #   plugin: "nav2_costmap_2d::ObstacleLayer"
