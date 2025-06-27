@@ -7,6 +7,8 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 from geometry_msgs.msg import Point, PoseStamped
 from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
+from pid import pid_increase_t
+from tf2_ros import TransformListener, Buffer,LookupTransform
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.parameter import Parameter
 
@@ -16,12 +18,24 @@ class EnhancedNavigationHandler:
     NAVIGATING = 1    # 导航中状态
     RETRYING = 2      # 重试状态
     
-    def __init__(self, node):
+    def __init__(self, node:Node):
         self.node = node
         self.current_state = self.IDLE
         self.current_goal_handle = None
         self.last_goal_time = 0.0
         self.failure_count = 0
+        self.max_failures = 20  # 最大失败次数提高到20次
+        self.active_goal:Point= None  # 当前活跃目标点
+        self.node.declare_parameter("pid_distance",0.2) #进入pid对齐的距离阈值
+        self.node.declare_parameter("map_frame", "map")  # 地图坐标系ID
+        self.node.declare_parameter("base_link_frame","base_link")  # 基座坐标系ID
+        self.pid_distance = self.node.get_parameter("pid_distance").value
+        self.map_frame = self.node.get_parameter("map_frame").value
+        self.base_link_frame = self.node.get_parameter("base_link_frame").value
+        self.pid_x=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  # PID控制器参数
+        self.pid_y=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  
+        self.pid_yaw=pid_increase_t(0.3,1,0.2, -0.5, 0.5)
+        # 创建Action客户端连接官方导航
         self.active_goal = None
 
         # 声明动态参数（带默认值）
@@ -41,7 +55,8 @@ class EnhancedNavigationHandler:
             NavigateToPose, 
             'navigate_to_pose'
         )
-        
+        self.buffer = Buffer()
+        self.tf_listener = TransformListener(self.buffer, self.node)
         # QoS配置
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,
@@ -226,7 +241,14 @@ class EnhancedNavigationHandler:
         self.last_goal_time = time.time()
         self.current_state = self.NAVIGATING
         self.node.get_logger().info(f"🎯 新目标已设置: x={goal.x:.2f}, y={goal.y:.2f}")
-
+    def pid_align(self):
+        current_pose=self.buffer.lookup_transform(
+            self.map_frame, 
+            self.base_link_frame,time=0)
+        error_x = self.active_goal.x - current_pose.transform.translation.x
+        error_y = self.active_goal.y - current_pose.transform.translation.y
+        
+        
 class OptimalGoalNavigator(Node):
     """最优目标导航节点"""
     def __init__(self):
