@@ -199,9 +199,9 @@ class EnhancedNavigationHandler:
         # error_yaw = target_yaw - current_yaw
         # PID控制器计算
         #控制指令
-        control_x = self.pid_x.update(point.x)
-        control_y = self.pid_y.update(point.y)
-        control_yaw = self.pid_yaw.update(target_yaw)
+        control_x = self.pid_x.update(current_pose.transform.translation.x)
+        control_y = self.pid_y.update(current_pose.transform.translation.y)
+        control_yaw = self.pid_yaw.update(current_yaw)
         control_yaw= self.normalize_angle(control_yaw)
         #将x y 转移到全局坐标系
         control_x = control_x * math.cos(current_yaw) - control_y * math.sin(current_yaw)

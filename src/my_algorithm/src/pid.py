@@ -4,7 +4,8 @@ class pid_increase_t:
         self.kp = kp
         self.ki = ki
         self.kd = kd
-        self.previous_error = 0
+        self.error_last = 0
+        self.error_last_last = 0
         self.integral = 0
         self.min = min
         self.max = max
@@ -12,9 +13,10 @@ class pid_increase_t:
         self.target = target
     def update(self, current_value):
         error = self.target - current_value
-        self.integral += error
-        output= self.kp * error +  self.ki*self.previous_error-2*self.kd*(current_value-self.previous_error)
-        self.previous_error = error
+        # self.integral += error
+        output= self.kp * error +  self.ki*self.error_last+self.kd*(error-2*self.error_last+self.error_last_last)
+        self.error_last = error
+        self.error_last_last = self.error_last
         if output > self.max:
             output = self.max
         elif output < self.min:
