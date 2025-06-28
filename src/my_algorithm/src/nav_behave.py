@@ -195,6 +195,9 @@ class EnhancedNavigationHandler:
             point.x - self.center_x) + math.pi
         #yaw 有过零点检测问题
         error_yaw=self.normalize_angle(target_yaw - current_yaw)
+        self.pid_x.set_target(point.x)
+        self.pid_y.set_target(point.z)
+        self.pid_yaw.set_target(target_yaw)
         # error_yaw = target_yaw - current_yaw
         # PID控制器计算
         #控制指令
@@ -203,7 +206,7 @@ class EnhancedNavigationHandler:
         control_yaw = self.pid_yaw.update(error_yaw)
         #将x y 转移到全局坐标系
         control_x = control_x * math.cos(current_yaw) - control_y * math.sin(current_yaw)
-        control_y = control_x * math.sin(current_yaw) + control_y * math.cos
+        control_y = control_x * math.sin(current_yaw) + control_y * math.cos(current_yaw)
         
         cmd_vel = Twist()
         cmd_vel.linear.x = control_x
@@ -234,7 +237,7 @@ class EnhancedNavigationHandler:
             
     def republish_goal(self):
         self.nav_reset=True
-    def normalize_angle(angle):
+    def normalize_angle(self,angle):
         """把任意弧度归一化到 [-pi, pi]"""
         return (angle + math.pi) % (2 * math.pi) - math.pi
 
