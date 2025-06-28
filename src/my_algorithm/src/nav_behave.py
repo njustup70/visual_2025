@@ -123,10 +123,10 @@ class EnhancedNavigationHandler:
         goal_msg.pose.position.z = 0.0
         #从目标点和篮筐中心点算出来目标yaw角
         if self.center_x > 0 and self.center_y > 0:
-            target_yaw= math.atan2(point.y - self.center_y, point.x - self.center_x)
+            target_yaw= self.normalize_angle(math.atan2(point.y - self.center_y, point.x - self.center_x))
         #仿真里面旋转了90度
         else :
-            target_yaw = math.atan2(point.y - self.center_y, point.x - self.center_x) + math.pi
+            target_yaw =self.normalize_angle( math.atan2(point.y - self.center_y, point.x - self.center_x) + math.pi/2)
         #从yaw 算出来四元数
         z= math.sin(target_yaw / 2.0)
         w= math.cos(target_yaw / 2.0)
@@ -188,9 +188,14 @@ class EnhancedNavigationHandler:
         current_yaw=self.normalize_angle( math.atan2(
             current_pose.transform.rotation.z, 
             current_pose.transform.rotation.w) * 2.0)
-        target_yaw = self.normalize_angle(math.atan2(
+        if(self.center_x > 0 and self.center_y > 0):
+            target_yaw = self.normalize_angle(math.atan2(
+                point.y - self.center_y, 
+                point.x - self.center_x))
+        else:
+            target_yaw = self.normalize_angle(math.atan2(
             point.y - self.center_y, 
-            point.x - self.center_x) + math.pi)
+            point.x - self.center_x) + math.pi/2)
         #yaw 有过零点检测问题
         # error_yaw=self.normalize_angle(target_yaw - current_yaw)
         self.pid_x.set_target(point.x)
