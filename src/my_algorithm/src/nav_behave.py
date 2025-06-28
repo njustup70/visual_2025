@@ -24,7 +24,7 @@ class EnhancedNavigationHandler:
     YAW_ONLY=3  # 调试用
     def __init__(self, node:Node):
         self.node = node
-        self.current_state = self.YAW_ONLY #状态
+        self.current_state = self.IDLE #状态
         self.current_goal_handle = None
         self.last_goal_time = 0.0
         self.failure_count = 0
@@ -129,7 +129,7 @@ class EnhancedNavigationHandler:
         goal_msg.pose.position.z = 0.0
         #从目标点和篮筐中心点算出来目标yaw角
         
-        target_yaw= self.normalize_angle(math.atan2(point.y - self.center_y, point.x - self.center_x))
+        target_yaw= self.normalize_angle(math.atan2(self.center_y-point.y, self.center_x-point.x))
         #仿真里面旋转了90度
         # else :
             # target_yaw =self.normalize_angle( math.atan2(point.y - self.center_y, point.x - self.center_x) + math.pi)
@@ -198,8 +198,8 @@ class EnhancedNavigationHandler:
             current_pose.transform.rotation.w) * 2.0)
         
         target_yaw = self.normalize_angle(math.atan2(
-            point.y - self.center_y, 
-            point.x - self.center_x))
+            self.center_y - point.y, 
+            self.center_x - point.x))
         
         #yaw 有过零点检测问题
         # error_yaw=self.normalize_angle(target_yaw - current_yaw)
