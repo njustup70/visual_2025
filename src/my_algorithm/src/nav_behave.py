@@ -17,17 +17,17 @@ class EnhancedNavigationHandler:
     """增强版导航处理模块 - 支持动态目标点跟踪和参数动态调整"""
     IDLE = 0          # 空闲状态，等待新目标
     NAVIGATING = 1    # 导航中状态
-    RETRYING = 2      # 重试状态
+    YAW =2       # 只对齐yaw角状态
     
     def __init__(self, node:Node):
         self.node = node
-        self.current_state = self.IDLE
+        self.current_state = self.IDLE #状态
         self.current_goal_handle = None
         self.last_goal_time = 0.0
         self.failure_count = 0
         self.max_failures = 20  # 最大失败次数提高到20次
         self.active_goal:Point= None  # 当前活跃目标点
-        self.active_align = False
+        self.best_goal:Point = None  # 最佳目标点
         self.node.declare_parameter("pid_distance",0.2) #进入pid对齐的距离阈值
         self.node.declare_parameter("map_frame", "map")  # 地图坐标系ID
         self.node.declare_parameter("base_link_frame","base_link")  # 基座坐标系ID
@@ -43,7 +43,9 @@ class EnhancedNavigationHandler:
         self.pid_yaw=pid_increase_t(0.3,1,0.2, -0.5, 0.5)
         # 创建Action客户端连接官方导航
         self.active_goal = None
-
+        #导航标志位
+        self.nav_success_flag=False
+        self.nav_reset=False
         # 声明动态参数（带默认值）
         self.node.declare_parameter('max_failures', 20)
         self.node.declare_parameter('goal_timeout', 60.0)
@@ -85,14 +87,15 @@ class EnhancedNavigationHandler:
         self.optimal_sub = self.node.create_subscription(
             Point,
             '/optimal_point_data',
-            self.optimal_point_callback,
+            self.set_goal,
             10
         )
-        self.align_timer = self.node.create_timer(0.02, self.pid_align)
+        self.state_timer = self.node.create_timer(0.02, self.state_update)
+        self.republish_timer = self.node.create_timer(1, self.republish_goal)
         self.node.get_logger().info(
             f"🚀 导航处理器初始化完成 | max_failures={self.max_failures} | goal_timeout={self.goal_timeout}s"
         )
-    
+        
     def parameters_callback(self, params):
         """处理参数变化的回调函数"""
         result = SetParametersResult(successful=True)
@@ -104,22 +107,8 @@ class EnhancedNavigationHandler:
                 self.goal_timeout = param.value
                 self.node.get_logger().info(f"⏱️ 更新 goal_timeout = {self.goal_timeout}s")
         return result
-
-    def optimal_point_callback(self, msg):
-        """处理优化点更新 - 仅在空闲状态保存并启动导航"""
-        if self.current_state == self.IDLE:
-            self.node.get_logger().info(f"📡 收到新优化点: x={msg.x:.2f}, y={msg.y:.2f}")
-            self.start_navigation(msg)
-        else:
-            self.node.get_logger().debug("⏩ 当前非空闲状态，跳过新目标点")
-    
-    def start_navigation(self, point):
-        """启动新导航任务"""
-        self.active_goal = point
-        self.failure_count = 0
-        self.set_current_goal(point)
-        self.publish_goal(point)
-        self.current_state = self.NAVIGATING
+    def set_goal(self, point):
+        self.best_goal = point
     
     def publish_goal(self, point):
         """发布导航目标"""
@@ -149,7 +138,7 @@ class EnhancedNavigationHandler:
         
         if not self.nav_client.wait_for_server(timeout_sec=5.0):
             self.node.get_logger().error("🚨 导航服务器连接超时")
-            self.reset_state()
+            # self.reset_state()
             return
         
         send_goal_future = self.nav_client.send_goal_async(
@@ -157,120 +146,44 @@ class EnhancedNavigationHandler:
             feedback_callback=self.nav_feedback_callback
         )
         send_goal_future.add_done_callback(self.goal_response_callback)
-    
-    def goal_response_callback(self, future):
-        """处理目标响应"""
+    def nav_feedback_callback(self, feedback):
+        """处理导航反馈"""
+        """_summary_ 暂时不做处理
+        """
+    def nav_result_callback(self, future:rclpy.Future):
+        """导航是否成功的回调"""
+        result= future.result()
+        status = result.status
+        if status == GoalStatus.STATUS_SUCCEEDED:
+            self.nav_success_flag = True
+        else:
+            self.nav_reset = True
+    def goal_response_callback(self, future:rclpy.Future):
+        """是否接受导航目标的回调"""
         try:
             goal_handle = future.result()
             if not goal_handle.accepted:
-                self.node.get_logger().warn("⚠️ 目标被导航服务器拒绝")
-                self.handle_failure()
+                self.node.get_logger().error("🚨 导航目标被拒绝")
+                # self.reset_state()
+                self.nav_reset = True
                 return
-                
-            self.current_goal_handle = goal_handle
+            self.node.get_logger().info("✅ 导航目标已接受，开始导航")
+            
+            # 设置导航结果回调
             result_future = goal_handle.get_result_async()
             result_future.add_done_callback(self.nav_result_callback)
-            self.node.get_logger().info("🎯 目标已被导航服务器接受")
-        except Exception as e:
-            self.node.get_logger().error(f"🚨 目标响应处理异常: {str(e)}")
-            self.handle_failure()
-    
-    def nav_feedback_callback(self, feedback_msg):
-        """处理导航反馈（检查超时）"""
-        current_time = time.time()
-        remaining_distance = feedback_msg.feedback.distance_remaining
-        self.node.get_logger().info(f"📏 剩余距离: {remaining_distance:.2f}米")
-        
-        if current_time - self.last_goal_time > self.goal_timeout:
-            self.node.get_logger().warn("⏰ 导航超时，取消当前任务")
-            self.cancel_navigation()
-    
-    def nav_result_callback(self, future):
-        """处理导航结果"""
-        try:
-            result = future.result().result
-            status = future.result().status
             
-            if status == GoalStatus.STATUS_SUCCEEDED:
-                self.node.get_logger().info('✅ 导航成功')
-                self.active_align = True
-            else:
-                status_name = self.get_status_name(status)
-                self.node.get_logger().warn(f'⚠️ 导航失败，状态: {status_name}')
-                self.handle_failure()
-            
-            self.reset_state()
-                
         except Exception as e:
-            self.node.get_logger().error(f"🚨 导航结果处理异常: {str(e)}")
-            self.handle_failure()
-    
-    def get_status_name(self, status):
-        """获取状态码的文本描述"""
-        status_map = {
-            GoalStatus.STATUS_UNKNOWN: "未知",
-            GoalStatus.STATUS_ACCEPTED: "已接受",
-            GoalStatus.STATUS_EXECUTING: "执行中",
-            GoalStatus.STATUS_CANCELING: "取消中",
-            GoalStatus.STATUS_SUCCEEDED: "成功",
-            GoalStatus.STATUS_CANCELED: "已取消",
-            GoalStatus.STATUS_ABORTED: "已中止"
-        }
-        return status_map.get(status, "未知状态")
-    
-    def handle_failure(self):
-        """统一处理导航失败情况"""
-        self.failure_count += 1
-        
-        if self.failure_count < self.max_failures:
-            self.node.get_logger().info(f'🔄 导航失败，当前连续失败次数: {self.failure_count}/{self.max_failures}')
-            self.publish_goal(self.active_goal)
-        else:
-            self.node.get_logger().error(f'🚨 连续失败{self.max_failures}次，放弃当前目标')
-            self.failure_count = 0
-            self.reset_state()
-    
-    def cancel_navigation(self):
-        """取消当前导航"""
-        if self.current_goal_handle:
-            future = self.current_goal_handle.cancel_goal_async()
-            future.add_done_callback(self.cancel_done_callback)
-    
-    def cancel_done_callback(self, future):
-        """取消操作完成回调"""
-        try:
-            response = future.result()
-            if response.return_code == GoalStatus.STATUS_CANCELED:
-                self.node.get_logger().info("🛑 导航已成功取消")
-            else:
-                self.node.get_logger().warn("⚠️ 取消失败")
-            self.handle_failure()
-        except Exception as e:
-            self.node.get_logger().error(f"🚨 取消操作异常: {str(e)}")
-            self.handle_failure()
-    
-    def reset_state(self):
-        """重置状态为空闲"""
-        self.current_state = self.IDLE
-        self.current_goal_handle = None
-        self.failure_count = 0
-        self.node.get_logger().info("🔄 导航状态已重置为空闲")
-    
-    def set_current_goal(self, goal):
-        """设置当前目标点"""
-        self.current_goal = goal
-        self.last_goal_time = time.time()
-        self.current_state = self.NAVIGATING
-        self.active_align=False
-        self.node.get_logger().info(f"🎯 新目标已设置: x={goal.x:.2f}, y={goal.y:.2f}")
-    def pid_align(self):
-        if self.active_align is False:
-            return
+            self.node.get_logger().error(f"🚨 导航目标响应异常: {str(e)}")
+            # self.reset_state()
+    def pid_align(self,point:Point):
+        # if self.active_align is False:
+            # return
         current_pose=self.buffer.lookup_transform(
             self.map_frame, 
             self.base_link_frame,time=0)
-        error_x = self.active_goal.x - current_pose.transform.translation.x
-        error_y = self.active_goal.y - current_pose.transform.translation.y
+        error_x = point.x - current_pose.transform.translation.x
+        error_y = point.y - current_pose.transform.translation.y
         current_yaw= math.atan2(
             current_pose.transform.rotation.z, 
             current_pose.transform.rotation.w) * 2.0
@@ -289,9 +202,28 @@ class EnhancedNavigationHandler:
         cmd_vel.angular.z = control_yaw
         # 发布速度指令
         self.cmd_vel_publisher.publish(cmd_vel)
-        
-        
-        
+    def state_update(self):
+        if self.current_state==self.IDLE:
+            if self.best_goal is None:
+                return
+            #发布目标点
+            self.active_goal= self.best_goal
+            self.publish_goal(self.active_goal)
+            #切换状态
+            self.current_state = self.NAVIGATING
+        elif self.current_state == self.NAVIGATING:
+            if self.nav_success_flag:
+                self.current_state = self.YAW
+                self.nav_success_flag = False
+            if self.nav_reset:
+                self.current_state = self.IDLE
+                self.nav_reset = False
+        elif self.current_state == self.YAW:
+            self.nav_reset= False
+            self.pid_align(point=self.active_goal)
+            
+    def republish_goal(self):
+        self.nav_reset=True
 class OptimalGoalNavigator(Node):
     """最优目标导航节点"""
     def __init__(self):
