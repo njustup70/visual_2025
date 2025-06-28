@@ -185,25 +185,24 @@ class EnhancedNavigationHandler:
         current_pose=self.buffer.lookup_transform(
             self.map_frame, 
             self.base_link_frame,time=Time())
-        error_x = point.x - current_pose.transform.translation.x
-        error_y = point.y - current_pose.transform.translation.y
-        current_yaw= math.atan2(
+        current_yaw=self.normalize_angle( math.atan2(
             current_pose.transform.rotation.z, 
-            current_pose.transform.rotation.w) * 2.0
-        target_yaw = math.atan2(
+            current_pose.transform.rotation.w) * 2.0)
+        target_yaw = self.normalize_angle(math.atan2(
             point.y - self.center_y, 
-            point.x - self.center_x) + math.pi
+            point.x - self.center_x) + math.pi)
         #yaw 有过零点检测问题
-        error_yaw=self.normalize_angle(target_yaw - current_yaw)
+        # error_yaw=self.normalize_angle(target_yaw - current_yaw)
         self.pid_x.set_target(point.x)
         self.pid_y.set_target(point.z)
         self.pid_yaw.set_target(target_yaw)
         # error_yaw = target_yaw - current_yaw
         # PID控制器计算
         #控制指令
-        control_x = self.pid_x.update(error_x)
-        control_y = self.pid_y.update(error_y)
-        control_yaw = self.pid_yaw.update(error_yaw)
+        control_x = self.pid_x.update(point.x)
+        control_y = self.pid_y.update(point.y)
+        control_yaw = self.pid_yaw.update(target_yaw)
+        control_yaw= self.normalize_angle(control_yaw)
         #将x y 转移到全局坐标系
         control_x = control_x * math.cos(current_yaw) - control_y * math.sin(current_yaw)
         control_y = control_x * math.sin(current_yaw) + control_y * math.cos(current_yaw)
