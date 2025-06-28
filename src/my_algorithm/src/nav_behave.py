@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import rclpy
-import time
+import time,json
 import rclpy.logging
 from rclpy.node import Node
 from rclpy.action import ActionClient
@@ -15,7 +15,7 @@ from rclpy.parameter import Parameter
 import math
 from geometry_msgs.msg import Twist
 from rclpy.time import Time
-
+from std_msgs.msg import String
 class EnhancedNavigationHandler:
     """增强版导航处理模块 - 支持动态目标点跟踪和参数动态调整"""
     IDLE = 0          # 空闲状态，等待新目标
@@ -49,6 +49,7 @@ class EnhancedNavigationHandler:
         #导航标志位
         self.nav_success_flag=False
         self.nav_reset=False
+        self.handle_reset = False # 手动重新导航 
         # 声明动态参数（带默认值）
         self.node.declare_parameter('max_failures', 20)
         self.node.declare_parameter('goal_timeout', 60.0)
@@ -91,6 +92,12 @@ class EnhancedNavigationHandler:
             Point,
             '/optimal_point_data',
             self.set_goal,
+            10
+        )
+        #订阅车体状态话题
+        self.state_sub = self.node.create_subscription(String,
+            '/robot_state',
+            self.state_callback,
             10
         )
         self.state_timer = self.node.create_timer(0.02, self.state_update)
@@ -243,6 +250,9 @@ class EnhancedNavigationHandler:
         elif self.current_state == self.YAW:
             self.nav_reset= False
             self.pid_align(point=self.active_goal)
+            if self.handle_reset:
+                self.current_state = self.IDLE
+                self.handle_reset = False
         elif self.current_state == self.YAW_ONLY:
             # 只对齐yaw角
             self.pid_align(point=self.active_goal)
@@ -256,6 +266,14 @@ class EnhancedNavigationHandler:
         self.active_goal= Point()
         self.active_goal.x= Pose.pose.position.x
         self.active_goal.y= Pose.pose.position.y
+    def state_callback(self, msg: String):
+        data= json.loads(msg.data)
+        #检测nav_state是否存在
+        if 'nav_state' in data:
+            nav_state = data['nav_state']
+            if nav_state == "IDLE":
+                self.handle_reset = True
+            
 class OptimalGoalNavigator(Node):
     """最优目标导航节点"""
     def __init__(self):
