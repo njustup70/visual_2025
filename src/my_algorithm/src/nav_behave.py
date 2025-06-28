@@ -124,7 +124,11 @@ class EnhancedNavigationHandler:
         goal_msg.pose.position.y = point.y
         goal_msg.pose.position.z = 0.0
         #从目标点和篮筐中心点算出来目标yaw角
-        target_yaw= math.atan2(point.y - self.center_y, point.x - self.center_x)
+        if self.center_x > 0 and self.center_y > 0:
+            target_yaw= math.atan2(point.y - self.center_y, point.x - self.center_x)
+        #仿真里面旋转了90度
+        else :
+            target_yaw = math.atan2(point.y - self.center_y, point.x - self.center_x) + math.pi / 2
         #从yaw 算出来四元数
         z= math.sin(target_yaw / 2.0)
         w= math.cos(target_yaw / 2.0)
