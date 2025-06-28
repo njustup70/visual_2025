@@ -26,18 +26,21 @@ class OptimalPointSelector(Node):
                               ParameterDescriptor(description='指令半径', type=ParameterType.PARAMETER_DOUBLE))
         self.declare_parameter('a', 1.0,
                               ParameterDescriptor(description='障碍物评分权重', type=ParameterType.PARAMETER_DOUBLE))
-        self.declare_parameter('b', 1.0,
+        self.declare_parameter('b', 2.0,
                               ParameterDescriptor(description='角度评分权重', type=ParameterType.PARAMETER_DOUBLE))
-        self.declare_parameter('c', 1.0,
+        self.declare_parameter('c', 5.0,
                               ParameterDescriptor(description='半径匹配评分权重', type=ParameterType.PARAMETER_DOUBLE))
-        self.declare_parameter('d', 1.0,  # 距离权重参数
+        self.declare_parameter('d', 1.0, 
                               ParameterDescriptor(description='机器人距离评分权重', type=ParameterType.PARAMETER_DOUBLE))
         self.declare_parameter('max_diff', 3.0,
                               ParameterDescriptor(description='最大允许半径差值', type=ParameterType.PARAMETER_DOUBLE))
-        self.declare_parameter('map_frame', 'map',  # TF坐标系参数
+        self.declare_parameter('map_frame', 'map', 
                               ParameterDescriptor(description='地图坐标系', type=ParameterType.PARAMETER_STRING))
-        self.declare_parameter('robot_frame', 'base_link',  # TF坐标系参数
+        self.declare_parameter('robot_frame', 'base_link', 
                               ParameterDescriptor(description='机器人坐标系', type=ParameterType.PARAMETER_STRING))
+        # 新增距离衰减因子参数
+        self.declare_parameter('dist_decay', 1.5, 
+                              ParameterDescriptor(description='距离衰减因子', type=ParameterType.PARAMETER_DOUBLE))
         
         # 初始化TF监听器
         self.tf_buffer = Buffer()
@@ -196,8 +199,9 @@ class OptimalPointSelector(Node):
         a = self.get_parameter('a').value
         b = self.get_parameter('b').value
         c = self.get_parameter('c').value
-        d = self.get_parameter('d').value  # 新增距离权重
+        d = self.get_parameter('d').value
         max_diff = self.get_parameter('max_diff').value
+        dist_decay = self.get_parameter('dist_decay').value  # 新增距离衰减因子
         
         center = Point(x=center_x, y=center_y)
         refer = Point(x=refer_x, y=refer_y)
@@ -225,7 +229,7 @@ class OptimalPointSelector(Node):
             angle_score = self.calculate_angle_score(pose.position, center, refer)
             raw_angle_scores.append(angle_score)
             
-            # 计算到机器人的距离（新增）
+            # 计算到机器人的距离
             if self.robot_position_valid:
                 dist = self.calculate_distance(pose.position, self.current_robot_position)
                 raw_robot_distances.append(dist)
@@ -254,18 +258,12 @@ class OptimalPointSelector(Node):
         norm_angle = [1 - (angle/90) for angle in raw_angle_scores]  # 角度越小越好
         norm_radius = 1 - (radius_score / max_diff)  # 差值越小越好
         
-        # 机器人距离归一化（距离越近得分越高）
-        if self.robot_position_valid and raw_robot_distances:
-            # 距离越小越好，所以higher_better=False
-            norm_robot = self.normalize_scores(raw_robot_distances, higher_better=False)
-            self.get_logger().info(
-                f"机器人位置: ({self.current_robot_position.x:.2f}, {self.current_robot_position.y:.2f}) | "
-                f"距离范围: {min(raw_robot_distances):.2f}-{max(raw_robot_distances):.2f}m"
-            )
-        else:
-            # TF查询失败时，距离评分置0
-            norm_robot = [0.0] * len(msg.poses)
-            self.get_logger().warn("⚠️ 机器人位置无效，距离评分设为0")
+        # 机器人距离归一化（使用改进的指数衰减方法）
+        norm_robot = self.normalize_robot_distance(
+            raw_robot_distances, 
+            self.robot_position_valid,
+            dist_decay
+        )
         
         # 打印归一化得分统计信息
         if norm_obstacle:
@@ -408,6 +406,44 @@ class OptimalPointSelector(Node):
         
         self.get_logger().debug(f"归一化: 原始范围[{min_score:.2f}-{max_score:.2f}] -> [0.0-1.0]")
         return normalized
+    
+    def normalize_robot_distance(self, distances, valid_position, decay_factor=1.5):
+        """
+        改进的距离归一化方法（指数衰减）
+        :param distances: 原始距离列表
+        :param valid_position: 机器人位置是否有效
+        :param decay_factor: 距离衰减因子（值越大近距离得分越高）
+        :return: 归一化后的得分列表
+        """
+        if not valid_position or not distances:
+            # 位置无效时返回全零列表
+            self.get_logger().warn("⚠️ 机器人位置无效，距离评分设为0")
+            return [0.0] * len(distances)
+        
+        # 1. 计算基础归一化得分
+        min_dist = min(distances)
+        max_dist = max(distances)
+        dist_range = max_dist - min_dist
+        
+        # 处理微小距离差（避免除零）
+        if dist_range < 0.1:  # 当距离差<10cm时视为相同距离
+            self.get_logger().info("距离差异小于10cm，使用统一中间值0.5")
+            return [0.5] * len(distances)
+        
+        # 基础线性归一化（距离越小得分越高）
+        base_scores = [(max_dist - d) / dist_range for d in distances]
+        
+        # 2. 引入距离衰减因子（指数衰减更符合导航需求）
+        decayed_scores = [min(1.0, score ** (1/decay_factor)) for score in base_scores]
+        
+        # 打印距离信息
+        self.get_logger().info(
+            f"机器人位置: ({self.current_robot_position.x:.2f}, {self.current_robot_position.y:.2f}) | "
+            f"距离范围: {min_dist:.2f}-{max_dist:.2f}m | "
+            f"衰减因子: {decay_factor:.2f}"
+        )
+        
+        return decayed_scores
 
 def main(args=None):
     rclpy.init(args=args)
