@@ -37,7 +37,7 @@
     region_origin_x: 0.0  # 障碍点采纳区间原点x
     region_origin_y: 0.0  # 原点y
     region_xlength: 14.5  # 障碍点采纳区间x长度
-    region_ylength: 3.5  # y长度 
+    region_ylength: 7.0  # y长度 
 
 /optimal_goal_navigator:  # OptimalGoalNavigator节点命名空间
   ros__parameters:
