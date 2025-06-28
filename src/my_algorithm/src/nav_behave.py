@@ -128,7 +128,7 @@ class EnhancedNavigationHandler:
             target_yaw= math.atan2(point.y - self.center_y, point.x - self.center_x)
         #仿真里面旋转了90度
         else :
-            target_yaw = math.atan2(point.y - self.center_y, point.x - self.center_x) + math.pi / 2
+            target_yaw = math.atan2(point.y - self.center_y, point.x - self.center_x) + math.pi
         #从yaw 算出来四元数
         z= math.sin(target_yaw / 2.0)
         w= math.cos(target_yaw / 2.0)
