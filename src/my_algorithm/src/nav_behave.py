@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 import time
+import rclpy.logging
 from rclpy.node import Node
 from rclpy.action import ActionClient
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
@@ -13,6 +14,8 @@ from rcl_interfaces.msg import SetParametersResult
 from rclpy.parameter import Parameter
 import math
 from geometry_msgs.msg import Twist
+from rclpy.time import Time
+
 class EnhancedNavigationHandler:
     """增强版导航处理模块 - 支持动态目标点跟踪和参数动态调整"""
     IDLE = 0          # 空闲状态，等待新目标
@@ -181,7 +184,7 @@ class EnhancedNavigationHandler:
             # return
         current_pose=self.buffer.lookup_transform(
             self.map_frame, 
-            self.base_link_frame,time=0)
+            self.base_link_frame,time=Time())
         error_x = point.x - current_pose.transform.translation.x
         error_y = point.y - current_pose.transform.translation.y
         current_yaw= math.atan2(
@@ -203,6 +206,7 @@ class EnhancedNavigationHandler:
         # 发布速度指令
         self.cmd_vel_publisher.publish(cmd_vel)
     def state_update(self):
+        # print("state is {}".format(self.current_state))
         if self.current_state==self.IDLE:
             if self.best_goal is None:
                 return
