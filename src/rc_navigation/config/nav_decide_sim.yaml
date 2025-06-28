@@ -41,5 +41,6 @@
 
 /optimal_goal_navigator:  # OptimalGoalNavigator节点命名空间
   ros__parameters:
+    is_dynamic: false  # 是否允许导航动态打断，允许最优点变化
     goal_timeout: 60.0 # 导航超时时间
     max_failures: 20   # 导航最大重试次数
