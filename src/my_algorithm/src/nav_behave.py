@@ -21,10 +21,10 @@ class EnhancedNavigationHandler:
     IDLE = 0          # 空闲状态，等待新目标
     NAVIGATING = 1    # 导航中状态
     YAW =2       # 只对齐yaw角状态
-    
+    YAW_ONLY=3  # 调试用
     def __init__(self, node:Node):
         self.node = node
-        self.current_state = self.IDLE #状态
+        self.current_state = self.YAW_ONLY #状态
         self.current_goal_handle = None
         self.last_goal_time = 0.0
         self.failure_count = 0
@@ -98,7 +98,13 @@ class EnhancedNavigationHandler:
         self.node.get_logger().info(
             f"🚀 导航处理器初始化完成 | max_failures={self.max_failures} | goal_timeout={self.goal_timeout}s"
         )
-        
+        if self.current_state==self.YAW_ONLY:
+            self.goal_sub= self.node.create_subscription(
+                PoseStamped,
+                '/goal_pose',
+                self.pid_align,
+                10
+            )
     def parameters_callback(self, params):
         """处理参数变化的回调函数"""
         result = SetParametersResult(successful=True)
@@ -238,13 +244,18 @@ class EnhancedNavigationHandler:
         elif self.current_state == self.YAW:
             self.nav_reset= False
             self.pid_align(point=self.active_goal)
-            
+        elif self.current_state == self.YAW_ONLY:
+            # 只对齐yaw角
+            self.pid_align(point=self.active_goal)
     def republish_goal(self):
         self.nav_reset=True
     def normalize_angle(self,angle):
         """把任意弧度归一化到 [-pi, pi]"""
         return (angle + math.pi) % (2 * math.pi) - math.pi
-
+    def goal_sub(self,Pose:PoseStamped):
+        """订阅目标点"""
+        self.active_goal.x= Pose.pose.position.x
+        self.active_goal.y= Pose.pose.position.y
 class OptimalGoalNavigator(Node):
     """最优目标导航节点"""
     def __init__(self):
