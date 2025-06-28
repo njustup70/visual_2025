@@ -43,3 +43,5 @@
   ros__parameters:
     goal_timeout: 30.0 # 导航超时时间
     max_failures: 20   # 导航最大重试次数
+    center_x: 14.5  # 篮筐（圆心）x坐标
+    center_y: 3.5 # 篮筐（圆心）y坐

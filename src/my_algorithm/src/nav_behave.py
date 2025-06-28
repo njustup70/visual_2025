@@ -11,7 +11,7 @@ from pid import pid_increase_t
 from tf2_ros import TransformListener, Buffer,LookupTransform
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.parameter import Parameter
-
+import math
 class EnhancedNavigationHandler:
     """增强版导航处理模块 - 支持动态目标点跟踪和参数动态调整"""
     IDLE = 0          # 空闲状态，等待新目标
@@ -29,9 +29,13 @@ class EnhancedNavigationHandler:
         self.node.declare_parameter("pid_distance",0.2) #进入pid对齐的距离阈值
         self.node.declare_parameter("map_frame", "map")  # 地图坐标系ID
         self.node.declare_parameter("base_link_frame","base_link")  # 基座坐标系ID
+        self.node.declare_parameter('center_x', 14.5)
+        self.node.declare_parameter('center_y', 3.5)
         self.pid_distance = self.node.get_parameter("pid_distance").value
         self.map_frame = self.node.get_parameter("map_frame").value
         self.base_link_frame = self.node.get_parameter("base_link_frame").value
+        self.center_x = self.node.get_parameter('center_x').value
+        self.center_y = self.node.get_parameter('center_y').value
         self.pid_x=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  # PID控制器参数
         self.pid_y=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  
         self.pid_yaw=pid_increase_t(0.3,1,0.2, -0.5, 0.5)
@@ -119,7 +123,13 @@ class EnhancedNavigationHandler:
         goal_msg.pose.position.x = point.x
         goal_msg.pose.position.y = point.y
         goal_msg.pose.position.z = 0.0
-        goal_msg.pose.orientation.w = 1.0
+        #从目标点和篮筐中心点算出来目标yaw角
+        target_yaw= math.atan2(point.y - self.center_y, point.x - self.center_x)
+        #从yaw 算出来四元数
+        z= math.sin(target_yaw / 2.0)
+        w= math.cos(target_yaw / 2.0)
+        goal_msg.pose.orientation.z = z
+        goal_msg.pose.orientation.w = w
         
         self.goal_publisher.publish(goal_msg)
         self.node.get_logger().info(f"📍 发布目标: x={point.x:.2f}, y={point.y:.2f}")
