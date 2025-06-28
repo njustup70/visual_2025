@@ -34,8 +34,8 @@ class EnhancedNavigationHandler:
         self.node.declare_parameter("pid_distance",0.2) #进入pid对齐的距离阈值
         self.node.declare_parameter("map_frame", "map")  # 地图坐标系ID
         self.node.declare_parameter("base_link_frame","base_link")  # 基座坐标系ID
-        self.node.declare_parameter('center_x', 14.5)
-        self.node.declare_parameter('center_y', 3.5)
+        self.node.declare_parameter('center_x', 3.5)
+        self.node.declare_parameter('center_y', -14)
         self.pid_distance = self.node.get_parameter("pid_distance").value
         self.map_frame = self.node.get_parameter("map_frame").value
         self.base_link_frame = self.node.get_parameter("base_link_frame").value
@@ -102,7 +102,7 @@ class EnhancedNavigationHandler:
             self.goal_sub= self.node.create_subscription(
                 PoseStamped,
                 '/goal_pose',
-                self.pid_align,
+                self.goal_sub,
                 10
             )
     def parameters_callback(self, params):
@@ -132,7 +132,7 @@ class EnhancedNavigationHandler:
             target_yaw= self.normalize_angle(math.atan2(point.y - self.center_y, point.x - self.center_x))
         #仿真里面旋转了90度
         else :
-            target_yaw =self.normalize_angle( math.atan2(point.y - self.center_y, point.x - self.center_x) + math.pi/2)
+            target_yaw =self.normalize_angle( math.atan2(point.y - self.center_y, point.x - self.center_x) + math.pi)
         #从yaw 算出来四元数
         z= math.sin(target_yaw / 2.0)
         w= math.cos(target_yaw / 2.0)
@@ -188,6 +188,8 @@ class EnhancedNavigationHandler:
     def pid_align(self,point:Point):
         # if self.active_align is False:
             # return
+        if point is None:
+            return
         current_pose=self.buffer.lookup_transform(
             self.map_frame, 
             self.base_link_frame,time=Time())
@@ -201,7 +203,7 @@ class EnhancedNavigationHandler:
         else:
             target_yaw = self.normalize_angle(math.atan2(
             point.y - self.center_y, 
-            point.x - self.center_x) + math.pi/2)
+            point.x - self.center_x) +math.pi)
         #yaw 有过零点检测问题
         # error_yaw=self.normalize_angle(target_yaw - current_yaw)
         self.pid_x.set_target(point.x)
@@ -221,7 +223,7 @@ class EnhancedNavigationHandler:
         cmd_vel = Twist()
         cmd_vel.linear.x = control_x
         cmd_vel.linear.y = control_y
-        cmd_vel.angular.z = control_yaw
+        cmd_vel.angular.z = 0.0
         # 发布速度指令
         self.cmd_vel_publisher.publish(cmd_vel)
     def state_update(self):
@@ -254,6 +256,7 @@ class EnhancedNavigationHandler:
         return (angle + math.pi) % (2 * math.pi) - math.pi
     def goal_sub(self,Pose:PoseStamped):
         """订阅目标点"""
+        self.active_goal= Point()
         self.active_goal.x= Pose.pose.position.x
         self.active_goal.y= Pose.pose.position.y
 class OptimalGoalNavigator(Node):
