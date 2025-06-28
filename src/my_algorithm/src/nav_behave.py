@@ -194,7 +194,7 @@ class EnhancedNavigationHandler:
         #yaw 有过零点检测问题
         # error_yaw=self.normalize_angle(target_yaw - current_yaw)
         self.pid_x.set_target(point.x)
-        self.pid_y.set_target(point.z)
+        self.pid_y.set_target(point.y)
         self.pid_yaw.set_target(target_yaw)
         # error_yaw = target_yaw - current_yaw
         # PID控制器计算

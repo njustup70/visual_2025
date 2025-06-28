@@ -46,14 +46,14 @@ def generate_launch_description():
             parameters=[LaunchConfiguration('config_file')]
         ),
         # OptimalGoalNavigator节点
-        Node(
-            package='my_algorithm',
-            executable='nav_behave.py',
-            emulate_tty=True,
-            output='screen',
-            name='optimal_goal_navigator',
-            parameters=[LaunchConfiguration('config_file')]
-        )
+        # Node(
+        #     package='my_algorithm',
+        #     executable='nav_behave.py',
+        #     emulate_tty=True,
+        #     output='screen',
+        #     name='optimal_goal_navigator',
+        #     parameters=[LaunchConfiguration('config_file')]
+        # )
     ]
     
     return LaunchDescription([
