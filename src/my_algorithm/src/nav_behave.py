@@ -12,6 +12,7 @@ from tf2_ros import TransformListener, Buffer,LookupTransform
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.parameter import Parameter
 import math
+from geometry_msgs.msg import Twist
 class EnhancedNavigationHandler:
     """增强版导航处理模块 - 支持动态目标点跟踪和参数动态调整"""
     IDLE = 0          # 空闲状态，等待新目标
@@ -26,6 +27,7 @@ class EnhancedNavigationHandler:
         self.failure_count = 0
         self.max_failures = 20  # 最大失败次数提高到20次
         self.active_goal:Point= None  # 当前活跃目标点
+        self.active_align = False
         self.node.declare_parameter("pid_distance",0.2) #进入pid对齐的距离阈值
         self.node.declare_parameter("map_frame", "map")  # 地图坐标系ID
         self.node.declare_parameter("base_link_frame","base_link")  # 基座坐标系ID
@@ -74,7 +76,11 @@ class EnhancedNavigationHandler:
             '/goal_pose',
             qos_profile
         )
-            
+        self.cmd_vel_publisher = self.node.create_publisher(
+            Twist,
+            '/cmd_vel',
+            qos_profile
+        )
         # 订阅优化点话题
         self.optimal_sub = self.node.create_subscription(
             Point,
@@ -82,7 +88,7 @@ class EnhancedNavigationHandler:
             self.optimal_point_callback,
             10
         )
-        
+        self.align_timer = self.node.create_timer(0.02, self.pid_align)
         self.node.get_logger().info(
             f"🚀 导航处理器初始化完成 | max_failures={self.max_failures} | goal_timeout={self.goal_timeout}s"
         )
@@ -187,6 +193,7 @@ class EnhancedNavigationHandler:
             
             if status == GoalStatus.STATUS_SUCCEEDED:
                 self.node.get_logger().info('✅ 导航成功')
+                self.active_align = True
             else:
                 status_name = self.get_status_name(status)
                 self.node.get_logger().warn(f'⚠️ 导航失败，状态: {status_name}')
@@ -254,13 +261,35 @@ class EnhancedNavigationHandler:
         self.current_goal = goal
         self.last_goal_time = time.time()
         self.current_state = self.NAVIGATING
+        self.active_align=False
         self.node.get_logger().info(f"🎯 新目标已设置: x={goal.x:.2f}, y={goal.y:.2f}")
     def pid_align(self):
+        if self.active_align is False:
+            return
         current_pose=self.buffer.lookup_transform(
             self.map_frame, 
             self.base_link_frame,time=0)
         error_x = self.active_goal.x - current_pose.transform.translation.x
         error_y = self.active_goal.y - current_pose.transform.translation.y
+        current_yaw= math.atan2(
+            current_pose.transform.rotation.z, 
+            current_pose.transform.rotation.w) * 2.0
+        target_yaw = math.atan2(
+            self.active_goal.y - self.center_y, 
+            self.active_goal.x - self.center_x) + math.pi
+        error_yaw = target_yaw - current_yaw
+        # PID控制器计算
+        #将x y 转移到全局坐标系
+        control_x =error_x*math.cos(current_yaw) + error_y * math.sin(current_yaw)
+        control_y = -error_x*math.sin(current_yaw) + error_y * math.sin(current_yaw)
+        control_yaw = error_yaw
+        cmd_vel = Twist()
+        cmd_vel.linear.x = control_x
+        cmd_vel.linear.y = control_y
+        cmd_vel.angular.z = control_yaw
+        # 发布速度指令
+        self.cmd_vel_publisher.publish(cmd_vel)
+        
         
         
 class OptimalGoalNavigator(Node):
