@@ -191,14 +191,20 @@ class EnhancedNavigationHandler:
             current_pose.transform.rotation.z, 
             current_pose.transform.rotation.w) * 2.0
         target_yaw = math.atan2(
-            self.active_goal.y - self.center_y, 
-            self.active_goal.x - self.center_x) + math.pi
-        error_yaw = target_yaw - current_yaw
+            point.y - self.center_y, 
+            point.x - self.center_x) + math.pi
+        #yaw 有过零点检测问题
+        error_yaw=self.normalize_angle(target_yaw - current_yaw)
+        # error_yaw = target_yaw - current_yaw
         # PID控制器计算
+        #控制指令
+        control_x = self.pid_x.update(error_x)
+        control_y = self.pid_y.update(error_y)
+        control_yaw = self.pid_yaw.update(error_yaw)
         #将x y 转移到全局坐标系
-        control_x =error_x*math.cos(current_yaw) + error_y * math.sin(current_yaw)
-        control_y = -error_x*math.sin(current_yaw) + error_y * math.sin(current_yaw)
-        control_yaw = error_yaw
+        control_x = control_x * math.cos(current_yaw) - control_y * math.sin(current_yaw)
+        control_y = control_x * math.sin(current_yaw) + control_y * math.cos
+        
         cmd_vel = Twist()
         cmd_vel.linear.x = control_x
         cmd_vel.linear.y = control_y
@@ -228,6 +234,10 @@ class EnhancedNavigationHandler:
             
     def republish_goal(self):
         self.nav_reset=True
+    def normalize_angle(angle):
+        """把任意弧度归一化到 [-pi, pi]"""
+        return (angle + math.pi) % (2 * math.pi) - math.pi
+
 class OptimalGoalNavigator(Node):
     """最优目标导航节点"""
     def __init__(self):
