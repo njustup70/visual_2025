@@ -88,7 +88,7 @@ class OptimalPointSelector(Node):
         
         # 存储障碍物点
         self.obstacle_points = []
-        self.obstacle_data_received = False  # 新增：标记是否收到障碍物数据
+        self.obstacle_data_received = False  # 标记是否收到障碍物数据
         
         # 创建定时器更新机器人位置
         self.update_rate = 10.0  # Hz
@@ -283,6 +283,8 @@ class OptimalPointSelector(Node):
                 f"机器人距离得分范围: 原始距离[{min(raw_robot_distances):.2f}-{max(raw_robot_distances):.2f}m] "
                 f"归一化[{min(norm_robot):.2f}-{max(norm_robot):.2f}]"
             )
+        elif not self.robot_position_valid:  # 新增：明确提示TF不可用
+            self.get_logger().warn("⚠️ 机器人位置无效，距离评分设为0")
         
         # 计算综合得分（新增d * norm_robot）
         total_scores = []
