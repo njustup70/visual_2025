@@ -17,7 +17,7 @@ from geometry_msgs.msg import Twist
 from rclpy.time import Time
 from std_msgs.msg import String
 class EnhancedNavigationHandler:
-    """增强版导航处理模块 - 支持动态目标点跟踪和参数动态调整"""
+    """支持动态目标点跟踪和参数动态调整"""
     IDLE = 0          # 空闲状态，等待新目标
     NAVIGATING = 1    # 导航中状态
     YAW =2       # 只对齐yaw角状态
@@ -50,9 +50,11 @@ class EnhancedNavigationHandler:
         self.nav_success_flag=False
         self.nav_reset=False
         self.handle_reset = False # 手动重新导航 
+
         # 声明动态参数（带默认值）
         self.node.declare_parameter('max_failures', 20)
         self.node.declare_parameter('goal_timeout', 60.0)
+        self.node.declare_parameter('is_dynamic', True)  # 动态打断参数
         
         # 注册参数回调
         self.node.add_on_set_parameters_callback(self.parameters_callback)
@@ -60,6 +62,7 @@ class EnhancedNavigationHandler:
         # 初始化参数值
         self.max_failures = self.node.get_parameter('max_failures').value
         self.goal_timeout = self.node.get_parameter('goal_timeout').value
+        self.is_dynamic = self.node.get_parameter('is_dynamic').value  # 是否允许动态打断
         
         # 创建Action客户端
         self.nav_client = ActionClient(
@@ -103,7 +106,7 @@ class EnhancedNavigationHandler:
         self.state_timer = self.node.create_timer(0.02, self.state_update)
         self.republish_timer = self.node.create_timer(1, self.republish_goal)
         self.node.get_logger().info(
-            f"🚀 导航处理器初始化完成 | max_failures={self.max_failures} | goal_timeout={self.goal_timeout}s"
+            f"🚀 导航处理器初始化完成 | max_failures={self.max_failures} | goal_timeout={self.goal_timeout}s | is_dynamic={self.is_dynamic}"
         )
         if self.current_state==self.YAW_ONLY:
             self.goal_sub= self.node.create_subscription(
@@ -122,9 +125,19 @@ class EnhancedNavigationHandler:
             elif param.name == 'goal_timeout':
                 self.goal_timeout = param.value
                 self.node.get_logger().info(f"⏱️ 更新 goal_timeout = {self.goal_timeout}s")
+            # 新增：动态打断参数处理
+            elif param.name == 'is_dynamic':
+                self.is_dynamic = param.value
+                self.node.get_logger().info(f"🌀 更新 is_dynamic = {self.is_dynamic}")
+                # 参数切换时清空等待中的目标
+                if not self.is_dynamic and self.pending_goal:
+                    self.node.get_logger().info("🛑 关闭动态模式，清空等待目标")
+                    self.pending_goal = None
         return result
+
     def set_goal(self, point):
         self.best_goal = point
+
     
     def publish_goal(self, point):
         """发布导航目标"""
@@ -188,7 +201,7 @@ class EnhancedNavigationHandler:
             # 设置导航结果回调
             result_future = goal_handle.get_result_async()
             result_future.add_done_callback(self.nav_result_callback)
-            
+
         except Exception as e:
             self.node.get_logger().error(f"🚨 导航目标响应异常: {str(e)}")
             # self.reset_state()
@@ -274,6 +287,7 @@ class EnhancedNavigationHandler:
             if nav_state == "IDLE":
                 self.handle_reset = True
             
+
 class OptimalGoalNavigator(Node):
     """最优目标导航节点"""
     def __init__(self):
