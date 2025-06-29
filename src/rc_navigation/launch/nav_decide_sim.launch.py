@@ -49,6 +49,8 @@ def generate_launch_description():
         Node(
             package='my_algorithm',
             executable='nav_behave.py',
+            emulate_tty=True,
+            output='screen',
             name='optimal_goal_navigator',
             parameters=[LaunchConfiguration('config_file')]
         )

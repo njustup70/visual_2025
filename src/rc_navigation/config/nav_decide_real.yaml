@@ -48,3 +48,5 @@
     is_dynamic: false  # 是否允许导航动态打断，允许最优点变化
     goal_timeout: 30.0 # 导航超时时间
     max_failures: 20   # 导航最大重试次数
+    center_x: 14.5  # 篮筐（圆心）x坐标
+    center_y: 3.5 # 篮筐（圆心）y坐
