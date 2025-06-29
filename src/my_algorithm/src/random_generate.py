@@ -12,7 +12,7 @@ from rcl_interfaces.msg import SetParametersResult, ParameterDescriptor, Paramet
 class RandomPointGenerator(Node):
     """独立的地图处理和随机点生成模块"""
     def __init__(self): 
-        super().__init__('random_point_generator')
+        super().__init__('random_generate')
         self.candidate_points = []  # 存储候选点
         self.base_angle = 0.0  # 半圆环基准角度
         self.publish_counter = 0  # 发布计数器

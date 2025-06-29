@@ -1,4 +1,5 @@
 #增量式pid控制器
+#!/usr/bin/env python3
 class pid_increase_t:
     def __init__(self, kp, ki, kd,min,max):
         self.kp = kp
