@@ -369,11 +369,6 @@ class OptimalPointSelector(Node):
         # 取锐角（0-90度）
         acute_angle = min(angle_deg, 180 - angle_deg)
         
-        self.get_logger().debug(
-            f"点({candidate.x:.2f},{candidate.y:.2f})角度差: {acute_angle:.1f}° "
-            f"(参考向量:({vec_ref[0]:.2f},{vec_ref[1]:.2f}) "
-            f"候选向量:({vec_cand[0]:.2f},{vec_cand[1]:.2f}))"
-        )
         return acute_angle
     
     def calculate_distance(self, p1, p2):
@@ -435,13 +430,6 @@ class OptimalPointSelector(Node):
         
         # 2. 引入距离衰减因子（指数衰减更符合导航需求）
         decayed_scores = [min(1.0, score ** (1/decay_factor)) for score in base_scores]
-        
-        # 打印距离信息
-        self.get_logger().info(
-            f"机器人位置: ({self.current_robot_position.x:.2f}, {self.current_robot_position.y:.2f}) | "
-            f"距离范围: {min_dist:.2f}-{max_dist:.2f}m | "
-            f"衰减因子: {decay_factor:.2f}"
-        )
         
         return decayed_scores
 
