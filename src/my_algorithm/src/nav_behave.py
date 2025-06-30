@@ -43,8 +43,9 @@ class EnhancedNavigationHandler:
         self.center_y = self.node.get_parameter('center_y').value
         self.pid_x=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  # PID控制器参数
         self.pid_y=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  
-        self.pid_yaw=pid_increase_t(0.3,1,0.2, -0.5, 0.5)
+        self.pid_yaw=pid_increase_t(0.4,1.2,0.2, -0.8, 0.8)
         self.min_velocity = 0.1  # 最小速度阈值
+        self.min_yaw_velocity = 0.2  # 最小yaw速度阈值
         self.local_threshold=0.015 #pid对齐的局部阈值
         self.yaw_threshold = 0.005  # yaw对齐的阈值
         # 创建Action客户端连接官方导航
@@ -248,7 +249,7 @@ class EnhancedNavigationHandler:
         if abs(control_y) <self.min_velocity:
             control_y=abs(control_y) * self.min_velocity / control_y
         if abs(control_yaw) < self.min_velocity:
-            control_yaw = abs(control_yaw) * self.min_velocity / control_yaw
+            control_yaw = abs(control_yaw) * self.min_yaw_velocity / control_yaw
         #判断是否对齐
         if abs(self.pid_x.error_last) < self.local_threshold :
             control_x = 0.0
