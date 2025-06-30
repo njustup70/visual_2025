@@ -116,7 +116,7 @@ class EnhancedNavigationHandler:
             self.goal_sub= self.node.create_subscription(
                 PoseStamped,
                 '/goal_pose',
-                self.goal_sub,
+                self.goal_sub, #回调函数
                 10
             )
     def parameters_callback(self, params):
@@ -124,7 +124,7 @@ class EnhancedNavigationHandler:
         result = SetParametersResult(successful=True)
         for param in params:
             if param.name == 'max_failures':
-                self.max_failures = param.value
+                self.max_failures = param.value # 更新最大失败次数
                 self.node.get_logger().info(f"📌 更新 max_failures = {self.max_failures}")
             elif param.name == 'goal_timeout':
                 self.goal_timeout = param.value
@@ -257,9 +257,9 @@ class EnhancedNavigationHandler:
             control_y = 0.0
         if abs(self.pid_yaw.error_last) < self.yaw_threshold :
             control_yaw = 0.0
-        control_x = control_x * math.cos(current_yaw) - control_y * math.sin(current_yaw)
-        control_y = control_x * math.sin(current_yaw) + control_y * math.cos(current_yaw)
-        
+        control_x_local = control_x * math.cos(current_yaw) - control_y * math.sin(current_yaw)
+        # control_y = control_x * math.sin(current_yaw) + control_y * math.cos(current_yaw)
+        control_y_local = control_y * math.cos(current_yaw) - control_x * math.sin(current_yaw)
         cmd_vel = Twist()
         cmd_vel.linear.x = 0.0
         cmd_vel.linear.y = 0.0
