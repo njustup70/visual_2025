@@ -220,9 +220,15 @@ class EnhancedNavigationHandler:
             current_pose.transform.rotation.z, 
             current_pose.transform.rotation.w) * 2.0)
         
-        target_yaw = self.normalize_angle(math.atan2(
-            self.center_y - point.y, 
-            self.center_x - point.x))
+        # target_yaw = self.normalize_angle(math.atan2(
+        #     self.center_y - point.y, 
+        #     self.center_x - point.x))
+        #计算当前的yaw 角
+        current_x= current_pose.transform.translation.x
+        current_y= current_pose.transform.translation.y
+        target_yaw=self.normalize_angle(math.atan2(
+            current_x - point.x,
+            current_y - point.y))
         
         #yaw 有过零点检测问题
         # error_yaw=self.normalize_angle(target_yaw - current_yaw)
@@ -254,8 +260,8 @@ class EnhancedNavigationHandler:
         control_y = control_x * math.sin(current_yaw) + control_y * math.cos(current_yaw)
         
         cmd_vel = Twist()
-        cmd_vel.linear.x = control_x
-        cmd_vel.linear.y = control_y
+        cmd_vel.linear.x = 0
+        cmd_vel.linear.y = 0
         cmd_vel.angular.z = control_yaw
         # 发布速度指令
         self.cmd_vel_publisher.publish(cmd_vel)
