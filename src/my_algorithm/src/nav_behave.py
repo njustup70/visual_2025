@@ -44,6 +44,8 @@ class EnhancedNavigationHandler:
         self.pid_x=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  # PID控制器参数
         self.pid_y=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  
         self.pid_yaw=pid_increase_t(0.3,1,0.2, -0.5, 0.5)
+        self.min_velocity = 0.1  # 最小速度阈值
+        self.local_threshold=0.005 #pid对齐的局部阈值
         # 创建Action客户端连接官方导航
         self.active_goal = None
         #导航标志位
@@ -234,6 +236,19 @@ class EnhancedNavigationHandler:
         control_yaw = self.pid_yaw.update(current_yaw)
         control_yaw= self.normalize_angle(control_yaw)
         #将x y 转移到全局坐标系
+        if abs(control_x) <self.min_velocity:
+            control_x=abs(control_x) * self.min_velocity / control_x
+        if abs(control_y) <self.min_velocity:
+            control_y=abs(control_y) * self.min_velocity / control_y
+        if abs(control_yaw) < self.min_velocity:
+            control_yaw = abs(control_yaw) * self.min_velocity / control_yaw
+        #判断是否对齐
+        if abs(self.pid_x.error_last) < self.local_threshold :
+            control_x = 0.0
+        if abs(self.pid_y.error_last) < self.local_threshold :
+            control_y = 0.0
+        if abs(self.pid_yaw.error_last) < self.local_threshold :
+            control_yaw = 0.0
         control_x = control_x * math.cos(current_yaw) - control_y * math.sin(current_yaw)
         control_y = control_x * math.sin(current_yaw) + control_y * math.cos(current_yaw)
         
