@@ -30,7 +30,6 @@ class OptimalPointSelector(Node):
                               ParameterDescriptor(description='半径匹配评分权重', type=ParameterType.PARAMETER_DOUBLE))
         self.declare_parameter('max_diff', 3.0,
                               ParameterDescriptor(description='最大允许半径差值', type=ParameterType.PARAMETER_DOUBLE))
-        # 新增距离评分参数
         self.declare_parameter('d', 1.0,
                               ParameterDescriptor(description='机器人距离评分参数', type=ParameterType.PARAMETER_DOUBLE))
         self.declare_parameter('map_frame', 'map',
@@ -39,8 +38,7 @@ class OptimalPointSelector(Node):
                               ParameterDescriptor(description='机器人坐标系', type=ParameterType.PARAMETER_STRING))
         self.declare_parameter('dist_decay', 1.5,
                               ParameterDescriptor(description='距离衰减因子', type=ParameterType.PARAMETER_DOUBLE))
-        
-        # 订阅话题
+    
         self.points_sub = self.create_subscription(
             PoseArray,
             '/points_select',
@@ -216,10 +214,6 @@ class OptimalPointSelector(Node):
         radius_diff = abs(actual_dist - comd_r)
         radius_score = min(radius_diff, max_diff)  # 限制在最大差值范围内
         
-        self.get_logger().info(
-            f"半径参数: 指令半径={comd_r:.2f}, 实际距离={actual_dist:.2f}, "
-            f"差值={radius_diff:.2f}, 最终得分={radius_score:.2f}"
-        )
         
         # 归一化处理
         if not self.obstacle_data_received or not self.obstacle_points:
@@ -238,19 +232,7 @@ class OptimalPointSelector(Node):
             f"(衰减因子={dist_decay})"
         )
         
-        # 打印归一化得分统计信息
-        if norm_obstacle:
-            self.get_logger().info(
-                f"障碍物得分范围: 原始[{min(raw_obstacle_scores):.2f}-{max(raw_obstacle_scores):.2f}] "
-                f"归一化[{min(norm_obstacle):.2f}-{max(norm_obstacle):.2f}]"
-            )
-        if norm_angle:
-            min_angle = min(raw_angle_scores)
-            max_angle = max(raw_angle_scores)
-            self.get_logger().info(
-                f"角度得分范围: 原始角度[{min_angle:.1f}°-{max_angle:.1f}°] "
-                f"归一化[{min(norm_angle):.2f}-{max(norm_angle):.2f}]"
-            )
+
         
         # 计算综合得分
         total_scores = []
@@ -281,13 +263,7 @@ class OptimalPointSelector(Node):
             f"{c:.1f}*{norm_radius:.3f}(半径) + "
             f"{d:.1f}*{raw_distance_scores[best_index]:.3f}(距离)"  # 新增距离评分输出
         )
-        
-        # 打印所有点的得分统计
-        if len(total_scores) > 1:
-            self.get_logger().info(
-                f"得分统计: 最高={max(total_scores):.3f}, 最低={min(total_scores):.3f}, "
-                f"平均={np.mean(total_scores):.3f}, 标准差={np.std(total_scores):.3f}"
-            )
+
     
     def calculate_obstacle_score(self, candidate, obstacles):
         """计算到最近障碍物的距离"""
@@ -317,7 +293,6 @@ class OptimalPointSelector(Node):
         norm_cand = math.sqrt(vec_cand[0]**2 + vec_cand[1]**2)
         
         if norm_ref < 1e-6 or norm_cand < 1e-6:
-            self.get_logger().warn("检测到零向量，使用默认角度值90°")
             return 90.0  # 处理零向量情况
             
         # 计算夹角余弦值（限制在[-1,1]范围内）
@@ -331,11 +306,6 @@ class OptimalPointSelector(Node):
         # 取锐角（0-90度）
         acute_angle = min(angle_deg, 180 - angle_deg)
         
-        self.get_logger().debug(
-            f"点({candidate.x:.2f},{candidate.y:.2f})角度差: {acute_angle:.1f}° "
-            f"(参考向量:({vec_ref[0]:.2f},{vec_ref[1]:.2f}) "
-            f"候选向量:({vec_cand[0]:.2f},{vec_cand[1]:.2f}))"
-        )
         return acute_angle
     
     def calculate_distance(self, p1, p2):
@@ -343,7 +313,6 @@ class OptimalPointSelector(Node):
         dx = p1.x - p2.x
         dy = p1.y - p2.y
         dist = math.sqrt(dx**2 + dy**2)
-        self.get_logger().debug(f"距离计算: ({p1.x:.2f},{p1.y:.2f})到({p2.x:.2f},{p2.y:.2f}) = {dist:.2f}")
         return dist
     
     def normalize_scores(self, scores, higher_better=True):
@@ -365,7 +334,6 @@ class OptimalPointSelector(Node):
         else:
             normalized = [(max_score - s) / score_range for s in scores]
         
-        self.get_logger().debug(f"归一化: 原始范围[{min_score:.2f}-{max_score:.2f}] -> [0.0-1.0]")
         return normalized
 
 def main(args=None):
