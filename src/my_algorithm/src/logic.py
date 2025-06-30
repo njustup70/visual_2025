@@ -102,17 +102,8 @@ class OptimalPointSelector(Node):
         """障碍物数据回调"""
         self.obstacle_points = [pose.position for pose in msg.poses]
         self.obstacle_data_received = True  # 标记已收到障碍物数据
-        self.get_logger().info(
-            f"收到 {len(self.obstacle_points)} 个障碍物点", 
-            throttle_duration_sec=2
-        )
         
-        # 打印前5个障碍物点位置
-        if len(self.obstacle_points) > 0:
-            obstacle_info = []
-            for i, obs in enumerate(self.obstacle_points[:5]):
-                obstacle_info.append(f"障碍物{i+1}: ({obs.x:.2f}, {obs.y:.2f})")
-            self.get_logger().info(f"障碍物位置(前5个): {'; '.join(obstacle_info)}")
+
     
     def optimal_point_callback(self, msg):
         """最优点的回调函数 - 转换为Point格式发布"""
@@ -122,10 +113,7 @@ class OptimalPointSelector(Node):
         point_msg.z = msg.pose.position.z
         
         self.optimal_point_data_pub.publish(point_msg)
-        self.get_logger().debug(
-            f"转换并发布Point格式的最优点: ({point_msg.x:.2f}, {point_msg.y:.2f}, {point_msg.z:.2f})",
-            throttle_duration_sec=1
-        )
+
     
     def points_callback(self, msg):
         """候选点数据回调"""
@@ -226,13 +214,6 @@ class OptimalPointSelector(Node):
         norm_angle = [1 - (angle/90) for angle in raw_angle_scores]  # 角度越小越好
         norm_radius = 1 - (radius_score / max_diff)  # 差值越小越好
         
-        # 新增：距离得分已经是0-1范围，不需要额外归一化
-        self.get_logger().info(
-            f"距离得分范围: [{min(raw_distance_scores):.4f}-{max(raw_distance_scores):.4f}] "
-            f"(衰减因子={dist_decay})"
-        )
-        
-
         
         # 计算综合得分
         total_scores = []
