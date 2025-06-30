@@ -260,8 +260,8 @@ class EnhancedNavigationHandler:
         control_y = control_x * math.sin(current_yaw) + control_y * math.cos(current_yaw)
         
         cmd_vel = Twist()
-        cmd_vel.linear.x = 0
-        cmd_vel.linear.y = 0
+        cmd_vel.linear.x = 0.0
+        cmd_vel.linear.y = 0.0
         cmd_vel.angular.z = control_yaw
         # 发布速度指令
         self.cmd_vel_publisher.publish(cmd_vel)
