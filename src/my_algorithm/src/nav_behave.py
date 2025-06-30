@@ -43,18 +43,19 @@ class EnhancedNavigationHandler:
         self.center_y = self.node.get_parameter('center_y').value
         self.pid_x=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  # PID控制器参数
         self.pid_y=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  
-        self.pid_yaw=pid_increase_t(0.4,1.2,0.2, -0.8, 0.8)
+        self.pid_yaw=pid_increase_t(0.5,1.5,0.3, -1.0, 1.0)
         self.min_velocity = 0.1  # 最小速度阈值
-        self.min_yaw_velocity = 0.2  # 最小yaw速度阈值
+        self.min_yaw_velocity = 0.3 # 最小yaw速度阈值
         self.local_threshold=0.015 #pid对齐的局部阈值
-        self.yaw_threshold = 0.005  # yaw对齐的阈值
+        self.yaw_threshold = 0.013  # yaw对齐的阈值
+        self.yaw_finsih_threshold=0.02 # yaw对齐完成的阈值
         # 创建Action客户端连接官方导航
         self.active_goal = None
         #导航标志位
         self.nav_success_flag=False
         self.nav_reset=False
         self.handle_reset = False # 手动重新导航 
-
+        self.align_finished=False # 对齐完成标志
         # 声明动态参数（带默认值）
         self.node.declare_parameter('max_failures', 20)
         self.node.declare_parameter('goal_timeout', 60.0)
@@ -106,6 +107,11 @@ class EnhancedNavigationHandler:
             '/robot_state',
             self.state_callback,
             10
+        )
+        self.state_pub= self.node.create_publisher(
+            String,
+            '/robot_state',
+            qos_profile
         )
         self.state_timer = self.node.create_timer(0.02, self.state_update)
         self.republish_timer = self.node.create_timer(1, self.republish_goal)
@@ -266,6 +272,9 @@ class EnhancedNavigationHandler:
         cmd_vel.angular.z = control_yaw
         # 发布速度指令
         self.cmd_vel_publisher.publish(cmd_vel)
+        if abs(self.pid_yaw.error_last) < self.yaw_finsih_threshold and self.align_finished is False:
+            self.align_finished = True
+            self.state_pub.publish(String(data=json.dumps({'nav_state': 'ALIGNED'})))
     def state_update(self):
         # print("state is {}".format(self.current_state))
         if self.current_state==self.IDLE:
@@ -277,6 +286,7 @@ class EnhancedNavigationHandler:
             self.publish_goal(self.active_goal)
             #切换状态
             self.current_state = self.NAVIGATING
+            self.align_finished= False
         elif self.current_state == self.NAVIGATING:
             if self.nav_success_flag:
                 self.current_state = self.YAW
