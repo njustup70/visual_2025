@@ -227,8 +227,8 @@ class EnhancedNavigationHandler:
         current_x= current_pose.transform.translation.x
         current_y= current_pose.transform.translation.y
         target_yaw=self.normalize_angle(math.atan2(
-            current_x - self.center_x ,
-            current_y - self.center_y))
+            self.center_y - current_y,
+            self.center_x - current_x))
         
         #yaw 有过零点检测问题
         # error_yaw=self.normalize_angle(target_yaw - current_yaw)
