@@ -227,8 +227,8 @@ class EnhancedNavigationHandler:
         current_x= current_pose.transform.translation.x
         current_y= current_pose.transform.translation.y
         target_yaw=self.normalize_angle(math.atan2(
-            current_x - point.x,
-            current_y - point.y))
+            current_x - self.center_x ,
+            current_y - self.center_y))
         
         #yaw 有过零点检测问题
         # error_yaw=self.normalize_angle(target_yaw - current_yaw)
@@ -272,6 +272,7 @@ class EnhancedNavigationHandler:
                 return
             #发布目标点
             self.active_goal= self.best_goal
+            print("\033[1;35m point x:{} y:{}\033[0m".format(self.best_goal.x,self.best_goal.y))
             self.publish_goal(self.active_goal)
             #切换状态
             self.current_state = self.NAVIGATING
