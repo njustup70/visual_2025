@@ -44,6 +44,9 @@ class EnhancedNavigationHandler:
         self.pid_x=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  # PID控制器参数
         self.pid_y=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  
         self.pid_yaw=pid_increase_t(0.3,1,0.2, -0.5, 0.5)
+        self.min_velocity = 0.1  # 最小速度阈值
+        self.local_threshold=0.015 #pid对齐的局部阈值
+        self.yaw_threshold = 0.005  # yaw对齐的阈值
         # 创建Action客户端连接官方导航
         self.active_goal = None
         #导航标志位
@@ -217,9 +220,15 @@ class EnhancedNavigationHandler:
             current_pose.transform.rotation.z, 
             current_pose.transform.rotation.w) * 2.0)
         
-        target_yaw = self.normalize_angle(math.atan2(
-            self.center_y - point.y, 
-            self.center_x - point.x))
+        # target_yaw = self.normalize_angle(math.atan2(
+        #     self.center_y - point.y, 
+        #     self.center_x - point.x))
+        #计算当前的yaw 角
+        current_x= current_pose.transform.translation.x
+        current_y= current_pose.transform.translation.y
+        target_yaw=self.normalize_angle(math.atan2(
+            self.center_y - current_y,
+            self.center_x - current_x))
         
         #yaw 有过零点检测问题
         # error_yaw=self.normalize_angle(target_yaw - current_yaw)
@@ -234,12 +243,25 @@ class EnhancedNavigationHandler:
         control_yaw = self.pid_yaw.update(current_yaw)
         control_yaw= self.normalize_angle(control_yaw)
         #将x y 转移到全局坐标系
+        if abs(control_x) <self.min_velocity:
+            control_x=abs(control_x) * self.min_velocity / control_x
+        if abs(control_y) <self.min_velocity:
+            control_y=abs(control_y) * self.min_velocity / control_y
+        if abs(control_yaw) < self.min_velocity:
+            control_yaw = abs(control_yaw) * self.min_velocity / control_yaw
+        #判断是否对齐
+        if abs(self.pid_x.error_last) < self.local_threshold :
+            control_x = 0.0
+        if abs(self.pid_y.error_last) < self.local_threshold :
+            control_y = 0.0
+        if abs(self.pid_yaw.error_last) < self.yaw_threshold :
+            control_yaw = 0.0
         control_x = control_x * math.cos(current_yaw) - control_y * math.sin(current_yaw)
         control_y = control_x * math.sin(current_yaw) + control_y * math.cos(current_yaw)
         
         cmd_vel = Twist()
-        cmd_vel.linear.x = control_x
-        cmd_vel.linear.y = control_y
+        cmd_vel.linear.x = 0.0
+        cmd_vel.linear.y = 0.0
         cmd_vel.angular.z = control_yaw
         # 发布速度指令
         self.cmd_vel_publisher.publish(cmd_vel)
@@ -250,6 +272,7 @@ class EnhancedNavigationHandler:
                 return
             #发布目标点
             self.active_goal= self.best_goal
+            print("\033[1;35m point x:{} y:{}\033[0m".format(self.best_goal.x,self.best_goal.y))
             self.publish_goal(self.active_goal)
             #切换状态
             self.current_state = self.NAVIGATING
