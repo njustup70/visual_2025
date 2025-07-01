@@ -158,7 +158,7 @@ controller_server:
       PathAlignCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 14.0
+        cost_weight: 10.0
         max_path_occupancy_ratio: 0.05
         trajectory_point_step: 3 #?
         threshold_to_consider: 1.5 # 0.5 # Distance (m) between robot and goal to stop considering path alignment and allow goal critics to take over. So just keep it same as threshold_to_consider in GoalCritic.
@@ -170,7 +170,7 @@ controller_server:
       PathFollowCritic: #? incentivizes making progress along the path, what is the diff between this and PathAlignCritic?
         enabled: true
         cost_power: 1
-        cost_weight: 8.0
+        cost_weight: 12.0
         offset_from_furthest: 10 # 13 # Number of path points after furthest one any trajectory achieves to drive path tracking relative to.
         threshold_to_consider: 1.5 # That is to say, path following will be considered until the robot is within this distance of the goal, at which point the goal critic will take over.
       PathAngleCritic: # This critic penalizes trajectories at a high relative angle to the path. This helps the robot make sharp turns when necessary due to large accumulated angular errors.
@@ -225,9 +225,9 @@ local_costmap:
           data_type: "LaserScan"
           max_obstacle_height: 2.0
           min_obstacle_height: -2.0
-          obstacle_max_range: 14.0
+          obstacle_max_range: 5.0
           obstacle_min_range: 0.5
-          raytrace_max_range: 20.0
+          raytrace_max_range: 5.0
           raytrace_min_range: 0.2
           clearing: True
           marking: True
@@ -358,8 +358,8 @@ smoother_server:
       path_upsampling_factor: 1     # 0 - path remains downsampled, 1 - path is upsampled back to original granularity using cubic bezier, 2... - more upsampling
       keep_start_orientation: false  # whether to prevent the start orientation from being smoothed
       keep_goal_orientation: false   # whether to prevent the gpal orientation from being smoothed
-      minimum_turning_radius: 0.40  # minimum turning radius the robot can perform. Can be set to 0.0 (or w_curve can be set to 0.0 with the same effect) for diff-drive/holonomic robots
-      w_curve: 30.0                 # weight to enforce minimum_turning_radius
+      minimum_turning_radius: 0.50  # minimum turning radius the robot can perform. Can be set to 0.0 (or w_curve can be set to 0.0 with the same effect) for diff-drive/holonomic robots
+      w_curve: 50.0                 # weight to enforce minimum_turning_radius
       w_dist: 0.0                   # weight to bind path to original as optional replacement for cost weight
       w_smooth: 2000000.0           # weight to maximize smoothness of path
       w_cost: 100.0                 # weight to steer robot away from collision and cost
