@@ -72,7 +72,7 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 40.0
+    controller_frequency: 25.0
     min_x_velocity_threshold: 0.005
     min_y_velocity_threshold: 0.005
     min_theta_velocity_threshold: 0.01
@@ -101,8 +101,8 @@ controller_server:
       minAngleDiff: 365.0 # if the angle difference is larger than this value, the robot will continue to adjust heading
       adjustHeadingSpeed: 0.2 # angular speed to adjust heading
       # 
-      time_steps: 40 # prediction horizon = time_steps x model_dt = 3s
-      model_dt: 0.05 # =1/controller_frequency
+      time_steps: 50 # prediction horizon = time_steps x model_dt = 3s
+      model_dt: 0.04 # =1/controller_frequency
       batch_size: 3000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
       vx_std: 0.5
       vy_std: 0.5
@@ -117,11 +117,11 @@ controller_server:
       temperature: 0.3 # 0 mean use control with best cost, huge value will lead to just taking mean of all trajectories without cost consideration.
       gamma: 0.020 # A trade-off between smoothness (high) and low energy (low). This is a complex parameter that likely won’t need to be changed from the default.
       motion_model: "Omni"
-      visualize: true # set to true to visualize the trajectories, but it will slow down the computation by a lot
+      visualize: True # set to true to visualize the trajectories, but it will slow down the computation by a lot
       reset_period: 1.0 # Required time of inactivity to reset optimizer (only in Humble
       regenerate_noises: false
       retry_attempt_limit: 3 # Number of attempts to find feasible trajectory on failure for soft-resets before reporting total failure.
-      publish_optimal_trajectory: true  #发布调试信息
+      publish_optimal_trajectory: False  #发布调试信息
       TrajectoryVisualizer:
         trajectory_step: 5
         time_step: 3
@@ -206,7 +206,7 @@ local_costmap:
       robot_base_frame: base_link  # 机器人本体坐标系
       use_sim_time: false     # 使用仿真时间
       rolling_window: true   # 启用滚动窗口模式
-      transform_tolerance: 1.0 # 坐标变换容忍时间
+      transform_tolerance: 0.5 # 坐标变换容忍时间
       width: 20   # 地图宽度3米
       height: 20  # 地图高度3米
       resolution: 0.05     # 分辨率5cm/格
@@ -423,9 +423,9 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [3.0, 3.0, 4.0] # 最大速度限制
-    min_velocity: [-3.0, -3.0, -4.0] # 最小速度限制
+    max_velocity: [1.0, 1.0, 1.5] # 最大速度限制
+    min_velocity: [-1.0, -1.0, -1.5] # 最小速度限制
     max_accel: [2.0, 2.0, 2.0] # 最大加速度限制
-    max_decel: [-2.0, -2.0, -2.0]
+    max_decel: [-1.0, -1.0, -1.0]
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
     velocity_timeout: 1.0
