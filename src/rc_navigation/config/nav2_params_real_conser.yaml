@@ -102,7 +102,7 @@ controller_server:
       adjustHeadingSpeed: 0.2 # angular speed to adjust heading
       # 
       time_steps: 40 # prediction horizon = time_steps x model_dt = 3s
-      model_dt: 0.05 # =1/controller_frequency
+      model_dt: 0.025 # =1/controller_frequency
       batch_size: 3000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
       vx_std: 0.5
       vy_std: 0.5
@@ -420,7 +420,7 @@ waypoint_follower:
 velocity_smoother:
   ros__parameters:
     use_sim_time: True
-    smoothing_frequency: 20.0
+    smoothing_frequency: 40.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
     max_velocity: [3.0, 3.0, 4.0] # 最大速度限制
