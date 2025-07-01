@@ -101,8 +101,10 @@ controller_server:
       minAngleDiff: 365.0 # if the angle difference is larger than this value, the robot will continue to adjust heading
       adjustHeadingSpeed: 0.2 # angular speed to adjust heading
       # 
-      time_steps: 50 # prediction horizon = time_steps x model_dt = 3s
-      model_dt: 0.04 # =1/controller_frequency
+
+      time_steps: 40 # prediction horizon = time_steps x model_dt = 3s
+      model_dt: 0.025 # =1/controller_frequency
+
       batch_size: 3000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
       vx_std: 0.5
       vy_std: 0.5
@@ -420,7 +422,7 @@ waypoint_follower:
 velocity_smoother:
   ros__parameters:
     use_sim_time: True
-    smoothing_frequency: 20.0
+    smoothing_frequency: 40.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
     max_velocity: [1.0, 1.0, 1.5] # 最大速度限制
