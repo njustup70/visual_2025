@@ -43,9 +43,9 @@ class EnhancedNavigationHandler:
         self.center_y = self.node.get_parameter('center_y').value
         self.pid_x=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  # PID控制器参数
         self.pid_y=pid_increase_t(0.3,1,0.2, -0.5, 0.5)  
-        self.pid_yaw=pid_increase_t(0.5,1.5,0.3, -1.0, 1.0)
+        self.pid_yaw=pid_increase_t(0.6,2,0.4, -2.0, 2.0)
         self.min_velocity = 0.1  # 最小速度阈值
-        self.min_yaw_velocity = 0.3 # 最小yaw速度阈值
+        self.min_yaw_velocity = 0.5 # 最小yaw速度阈值
         self.local_threshold=0.015 #pid对齐的局部阈值
         self.yaw_threshold = 0.013  # yaw对齐的阈值
         self.yaw_finsih_threshold=0.02 # yaw对齐完成的阈值
