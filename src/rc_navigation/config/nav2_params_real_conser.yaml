@@ -100,15 +100,12 @@ controller_server:
       adjustThre: 14.0 # slopeDegree larger than this value will trigger the adjust heading behavior
       minAngleDiff: 365.0 # if the angle difference is larger than this value, the robot will continue to adjust heading
       adjustHeadingSpeed: 0.2 # angular speed to adjust heading
-      # 
-
       time_steps: 50 # prediction horizon = time_steps x model_dt = 3s
       model_dt: 0.025 # =1/controller_frequency
-
       batch_size: 3000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
       vx_std: 0.5
       vy_std: 0.5
-      wz_std: 0.6
+      wz_std: 0.2
       vx_max: 1.0 # prediction horizon x vx_max = 3.0 m -->local costmap dim should larger than 3.0 x 2 = 6m
       vx_min: -1.0 # Maximum reverse velocity (m/s).
       vy_max: 1.0
@@ -133,7 +130,6 @@ controller_server:
       GoalAngleCritic: # 当机器人距离目标点较近时，鼓励它调整角度朝向目标的朝向
         cost_weight: 8.0
         threshold_to_consider: 2.0 #距离三米开始对齐
-
       GoalCritic: #鼓励机器人靠近最终目标位置
         enabled: true
         cost_power: 1
@@ -186,7 +182,7 @@ controller_server:
       TwirlingCritic:
         enabled: true
         twirling_cost_power: 1
-        twirling_cost_weight: 10.0
+        twirling_cost_weight: 20.0
 # local_costmap:
 #   plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]  # 添加 obstacle_layer
 #   obstacle_layer:
@@ -339,47 +335,29 @@ planner_server:
       tolerance: 0.1 # 目标点容差0.5米，允许规划路径终点在此范围内
       use_astar: true # ！！！！是否启动A*算法，若false则启动Dijkstra算法，A*快速响应动态障碍，适合人员流动频繁的区域
       allow_unknown: true # 允许在位置区域通行
-smoother_server:
-  ros__parameters:
-    use_sim_time: True
-    smoother_plugins: ["SmoothPath"]
-    SmoothPath:
-      # 3rd JUST SOSO
-      # plugin: "nav2_smoother::SimpleSmoother"
-      # tolerance: 1.0e-10
-      # do_refinement: True
-      # refinement_num: 5
-      # max_its: 1000
-      # w_data: 0.2
-      # w_smooth: 0.3
+      
+SmoothPath:
+  plugin: "nav2_constrained_smoother/ConstrainedSmoother"
+  reversing_enabled: false
+  path_downsampling_factor: 3
+  path_upsampling_factor: 1
+  keep_start_orientation: false
+  keep_goal_orientation: false
+  minimum_turning_radius: 0.0        # ✅ 全向轮无需转弯半径
+  w_curve: 0.0                       # ✅ 关闭转弯惩罚
+  w_dist: 0.0
+  w_smooth: 10000.0                  # ✅ 更合理的平滑权重
+  w_cost: 500.0                      # ✅ 加强避障考虑
+  w_cost_cusp_multiplier: 3.0        # 保留（不会被触发，但没问题）
+  cusp_zone_length: 2.5
 
-      # 1st BEST
-      plugin: "nav2_constrained_smoother/ConstrainedSmoother"
-      reversing_enabled: false       # whether to detect forward/reverse direction and cusps. Should be set to false for paths without orientations assigned
-      path_downsampling_factor: 3   # every n-th node of the path is taken. Useful for speed-up
-      path_upsampling_factor: 1     # 0 - path remains downsampled, 1 - path is upsampled back to original granularity using cubic bezier, 2... - more upsampling
-      keep_start_orientation: false  # whether to prevent the start orientation from being smoothed
-      keep_goal_orientation: false   # whether to prevent the gpal orientation from being smoothed
-      minimum_turning_radius: 0.50  # minimum turning radius the robot can perform. Can be set to 0.0 (or w_curve can be set to 0.0 with the same effect) for diff-drive/holonomic robots
-      w_curve: 50.0                 # weight to enforce minimum_turning_radius
-      w_dist: 0.0                   # weight to bind path to original as optional replacement for cost weight
-      w_smooth: 2000000.0           # weight to maximize smoothness of path
-      w_cost: 100.0                 # weight to steer robot away from collision and cost
+  optimizer:
+    max_iterations: 70
+    debug_optimizer: false
+    gradient_tol: 1.0e-4             # ✅ 更合理的终止条件
+    fn_tol: 1.0e-15
+    param_tol: 1.0e-20
 
-      # Parameters used to improve obstacle avoidance near cusps (forward/reverse movement changes)
-      w_cost_cusp_multiplier: 3.0   # option to use higher weight during forward/reverse direction change which is often accompanied with dangerous rotations
-      cusp_zone_length: 2.5         # length of the section around cusp in which nodes use w_cost_cusp_multiplier (w_cost rises gradually inside the zone towards the cusp point, whose costmap weight eqals w_cost*w_cost_cusp_multiplier)
-
-      # Points in robot frame to grab costmap values from. Format: [x1, y1, weight1, x2, y2, weight2, ...]
-      # IMPORTANT: Requires much higher number of iterations to actually improve the path. Uncomment only if you really need it (highly elongated/asymmetric robots)
-      # cost_check_points: [-0.185, 0.0, 1.0]
-
-      optimizer:
-        max_iterations: 70            # max iterations of smoother
-        debug_optimizer: false        # print debug info
-        gradient_tol: 5e3
-        fn_tol: 1.0e-15
-        param_tol: 1.0e-20
 behavior_server:
   ros__parameters:
     costmap_topic: local_costmap/costmap_raw # 订阅本地代价地图的原始数据话题
