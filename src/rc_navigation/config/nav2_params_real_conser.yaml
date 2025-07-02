@@ -102,8 +102,8 @@ controller_server:
       adjustHeadingSpeed: 0.2 # angular speed to adjust heading
       # 
 
-      time_steps: 40 # prediction horizon = time_steps x model_dt = 3s
-      model_dt: 0.025 # =1/controller_frequency
+      time_steps: 50 # prediction horizon = time_steps x model_dt = 3s
+      model_dt: 0.04 # =1/controller_frequency
 
       batch_size: 3000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
       vx_std: 0.5
@@ -132,12 +132,12 @@ controller_server:
       critics: ["ObstaclesCritic", "GoalCritic", "PathAlignCritic", "PathFollowCritic", "TwirlingCritic","GoalAngleCritic"]
       GoalAngleCritic: # 当机器人距离目标点较近时，鼓励它调整角度朝向目标的朝向
         cost_weight: 8.0
-        threshold_to_consider: 3.0 #距离三米开始对齐
+        threshold_to_consider: 2.0 #距离三米开始对齐
 
       GoalCritic: #鼓励机器人靠近最终目标位置
         enabled: true
         cost_power: 1
-        cost_weight: 5.0
+        cost_weight: 10.0
         threshold_to_consider: 1.5 # 超过1.5米时才会被纳入评分考虑，防止它在离目标太远时被目标吸引，反而忽视路径或避障
       PreferForwardCritic: # moving in the forward direction, rather than reversing.
         enabled: false
