@@ -210,7 +210,7 @@ local_costmap:
       width: 15   # 地图宽度3米
       height: 15  # 地图高度3米
       resolution: 0.05     # 分辨率5cm/格
-      robot_radius: 0.5   # 机器人碰撞半径22cm
+      robot_radius: 0.22   # 机器人碰撞半径22cm
       plugins: ["obstacle_layer", "inflation_layer"] # 激活的层级
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayerUltra"
@@ -278,7 +278,7 @@ global_costmap:
       robot_base_frame: base_link
       transform_tolerance: 1.0 # 坐标变换容忍时间
       use_sim_time: false
-      robot_radius: 0.5 # 机器人碰撞半径0.22米，用于膨胀层生成避障区域
+      robot_radius: 0.22 # 机器人碰撞半径0.22米，用于膨胀层生成避障区域
       resolution: 0.05 # 地图分辨率为5厘米/像素
       track_unknown_space: true # 将未知区域视为可通行区域
       plugins: ["static_layer", "obstacle_layer","inflation_layer"]
