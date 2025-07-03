@@ -425,7 +425,7 @@ velocity_smoother:
     feedback: "OPEN_LOOP"
     max_velocity: [3.0, 3.0, 4.0] # 最大速度限制
     min_velocity: [-3.0, -3.0, -4.0] # 最小速度限制
-    max_accel: [2.0, 2.0, 2.0] # 最大加速度限制
-    max_decel: [-1.5, -1.5, -2.0]
+    max_accel: [5.0, 5.0, 3.0] # 最大加速度限制
+    max_decel: [-6.0, -6.0, -3.0]
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
     velocity_timeout: 1.0
