@@ -92,15 +92,16 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.06
-      yaw_goal_tolerance: 0.006
+      xy_goal_tolerance: 0.03
+      yaw_goal_tolerance: 0.003
     FollowPath:    
       plugin: "nav2_mppi_controller::MPPIController"
       #param 
       adjustThre: 14.0 # slopeDegree larger than this value will trigger the adjust heading behavior
       minAngleDiff: 365.0 # if the angle difference is larger than this value, the robot will continue to adjust heading
       adjustHeadingSpeed: 0.2 # angular speed to adjust heading
-      time_steps: 50 # prediction horizon = time_steps x model_dt = 3s
+      # 
+      time_steps: 40 # prediction horizon = time_steps x model_dt = 3s
       model_dt: 0.025 # =1/controller_frequency
       batch_size: 3000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
       vx_std: 0.5
@@ -116,11 +117,11 @@ controller_server:
       temperature: 0.3 # 0 mean use control with best cost, huge value will lead to just taking mean of all trajectories without cost consideration.
       gamma: 0.020 # A trade-off between smoothness (high) and low energy (low). This is a complex parameter that likely won’t need to be changed from the default.
       motion_model: "Omni"
-      visualize: True # set to true to visualize the trajectories, but it will slow down the computation by a lot
+      visualize: true # set to true to visualize the trajectories, but it will slow down the computation by a lot
       reset_period: 1.0 # Required time of inactivity to reset optimizer (only in Humble
       regenerate_noises: false
       retry_attempt_limit: 3 # Number of attempts to find feasible trajectory on failure for soft-resets before reporting total failure.
-      publish_optimal_trajectory: False  #发布调试信息
+      publish_optimal_trajectory: true  #发布调试信息
       TrajectoryVisualizer:
         trajectory_step: 5
         time_step: 3
@@ -128,12 +129,13 @@ controller_server:
       #   min_turning_r: 0.2
       critics: ["ObstaclesCritic", "GoalCritic", "PathAlignCritic", "PathFollowCritic", "TwirlingCritic","GoalAngleCritic"]
       GoalAngleCritic: # 当机器人距离目标点较近时，鼓励它调整角度朝向目标的朝向
-        cost_weight: 8.0
-        threshold_to_consider: 2.0 #距离三米开始对齐
-      GoalCritic: #鼓励机器人靠近最终目标位置
+        cost_weight: 10.0
+        threshold_to_consider: 0.8 #距离三米开始对齐
+
+      GoalCritic: # 鼓励机器人靠近最终目标位置
         enabled: true
         cost_power: 1
-        cost_weight: 10.0
+        cost_weight: 5.0
         threshold_to_consider: 1.5 # 超过1.5米时才会被纳入评分考虑，防止它在离目标太远时被目标吸引，反而忽视路径或避障
       PreferForwardCritic: # moving in the forward direction, rather than reversing.
         enabled: false
@@ -150,13 +152,13 @@ controller_server:
         collision_cost: 30.0
         collision_margin_distance: 0.50 # 进入 collision_margin_distance 范围内会极大地惩罚，防止靠太近
         near_goal_distance: 0.20 # if the robot is within this distance of the goal, it will not be repelled by obstacles.
-        inflation_radius: 0.80 # Radius to inflate costmap around lethal obstacles. This should be the same as for your inflation layer (Humble only)
+        inflation_radius: 1.20 # Radius to inflate costmap around lethal obstacles. This should be the same as for your inflation layer (Humble only)
         cost_scaling_factor: 2.0 # Exponential decay factor across inflation radius. This should be the same as for your inflation layer (Humble only)
         inflation_layer_name: ["local_inflation_layer","global_inflation_layer"] # 
       PathAlignCritic:
-        enabled: False
+        enabled: true
         cost_power: 1
-        cost_weight: 10.0
+        cost_weight: 14.0
         max_path_occupancy_ratio: 0.05
         trajectory_point_step: 3 #?
         threshold_to_consider: 1.5 # 0.5 # Distance (m) between robot and goal to stop considering path alignment and allow goal critics to take over. So just keep it same as threshold_to_consider in GoalCritic.
@@ -168,21 +170,21 @@ controller_server:
       PathFollowCritic: #? incentivizes making progress along the path, what is the diff between this and PathAlignCritic?
         enabled: true
         cost_power: 1
-        cost_weight: 12.0
-        offset_from_furthest: 8 # 13 # Number of path points after furthest one any trajectory achieves to drive path tracking relative to.
+        cost_weight: 8.0
+        offset_from_furthest: 10 # 13 # Number of path points after furthest one any trajectory achieves to drive path tracking relative to.
         threshold_to_consider: 1.5 # That is to say, path following will be considered until the robot is within this distance of the goal, at which point the goal critic will take over.
       PathAngleCritic: # This critic penalizes trajectories at a high relative angle to the path. This helps the robot make sharp turns when necessary due to large accumulated angular errors.
         enabled: false
         cost_power: 1
         cost_weight: 2.0
-        offset_from_furthest: 8
-        threshold_to_consider: 0.5 # 0.5
+        offset_from_furthest: 4
+        threshold_to_consider: 1.5 # 0.5
         max_angle_to_furthest: 1.0
         mode: 0
       TwirlingCritic:
         enabled: true
         twirling_cost_power: 1
-        twirling_cost_weight: 20.0
+        twirling_cost_weight: 15.0
 # local_costmap:
 #   plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]  # 添加 obstacle_layer
 #   obstacle_layer:
@@ -204,11 +206,11 @@ local_costmap:
       robot_base_frame: base_link  # 机器人本体坐标系
       use_sim_time: false     # 使用仿真时间
       rolling_window: true   # 启用滚动窗口模式
-      transform_tolerance: 0.5 # 坐标变换容忍时间
-      width: 20   # 地图宽度3米
-      height: 20  # 地图高度3米
+      transform_tolerance: 1.0 # 坐标变换容忍时间
+      width: 15   # 地图宽度3米
+      height: 15  # 地图高度3米
       resolution: 0.05     # 分辨率5cm/格
-      robot_radius: 0.22   # 机器人碰撞半径22cm
+      robot_radius: 0.5   # 机器人碰撞半径22cm
       plugins: ["obstacle_layer", "inflation_layer"] # 激活的层级
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayerUltra"
@@ -223,9 +225,9 @@ local_costmap:
           data_type: "LaserScan"
           max_obstacle_height: 2.0
           min_obstacle_height: -2.0
-          obstacle_max_range: 5.0
+          obstacle_max_range: 14.0
           obstacle_min_range: 0.5
-          raytrace_max_range: 5.0
+          raytrace_max_range: 20.0
           raytrace_min_range: 0.2
           clearing: True
           marking: True
@@ -234,7 +236,7 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True
         cost_scaling_factor: 2.0
-        inflation_radius: 0.8 
+        inflation_radius: 1.20 
       always_send_full_costmap: True # 始终发布完整地图
                         
 
@@ -276,7 +278,7 @@ global_costmap:
       robot_base_frame: base_link
       transform_tolerance: 1.0 # 坐标变换容忍时间
       use_sim_time: false
-      robot_radius: 0.22 # 机器人碰撞半径0.22米，用于膨胀层生成避障区域
+      robot_radius: 0.5 # 机器人碰撞半径0.22米，用于膨胀层生成避障区域
       resolution: 0.05 # 地图分辨率为5厘米/像素
       track_unknown_space: true # 将未知区域视为可通行区域
       plugins: ["static_layer", "obstacle_layer","inflation_layer"]
@@ -294,7 +296,7 @@ global_costmap:
           data_type: "LaserScan"
           max_obstacle_height: 2.0
           min_obstacle_height: -2.0
-          obstacle_max_range: 5.0
+          obstacle_max_range: 14.0
           obstacle_min_range: 0.5
           raytrace_max_range: 20.0
           raytrace_min_range: 0.2
@@ -306,7 +308,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 2.0 # 代价值随距离的衰减系数，值越大衰减越快
-        inflation_radius: 0.80
+        inflation_radius: 1.20
       always_send_full_costmap: True
 
 map_server:
@@ -334,30 +336,48 @@ planner_server:
       plugin: "nav2_navfn_planner/NavfnPlanner"
       tolerance: 0.1 # 目标点容差0.5米，允许规划路径终点在此范围内
       use_astar: true # ！！！！是否启动A*算法，若false则启动Dijkstra算法，A*快速响应动态障碍，适合人员流动频繁的区域
-      allow_unknown: true # 允许在位置区域通行
-      
-SmoothPath:
-  plugin: "nav2_constrained_smoother/ConstrainedSmoother"
-  reversing_enabled: false
-  path_downsampling_factor: 3
-  path_upsampling_factor: 1
-  keep_start_orientation: false
-  keep_goal_orientation: false
-  minimum_turning_radius: 0.0        # ✅ 全向轮无需转弯半径
-  w_curve: 0.0                       # ✅ 关闭转弯惩罚
-  w_dist: 0.0
-  w_smooth: 10000.0                  # ✅ 更合理的平滑权重
-  w_cost: 500.0                      # ✅ 加强避障考虑
-  w_cost_cusp_multiplier: 3.0        # 保留（不会被触发，但没问题）
-  cusp_zone_length: 2.5
+      allow_unknown: False # 允许在位置区域通行
+smoother_server:
+  ros__parameters:
+    use_sim_time: True
+    smoother_plugins: ["SmoothPath"]
+    SmoothPath:
+      # 3rd JUST SOSO
+      # plugin: "nav2_smoother::SimpleSmoother"
+      # tolerance: 1.0e-10
+      # do_refinement: True
+      # refinement_num: 5
+      # max_its: 1000
+      # w_data: 0.2
+      # w_smooth: 0.3
 
-  optimizer:
-    max_iterations: 70
-    debug_optimizer: false
-    gradient_tol: 1.0e-4             # ✅ 更合理的终止条件
-    fn_tol: 1.0e-15
-    param_tol: 1.0e-20
+      # 1st BEST
+      plugin: "nav2_constrained_smoother/ConstrainedSmoother"
+      reversing_enabled: false       # whether to detect forward/reverse direction and cusps. Should be set to false for paths without orientations assigned
+      path_downsampling_factor: 3   # every n-th node of the path is taken. Useful for speed-up
+      path_upsampling_factor: 1     # 0 - path remains downsampled, 1 - path is upsampled back to original granularity using cubic bezier, 2... - more upsampling
+      keep_start_orientation: false  # whether to prevent the start orientation from being smoothed
+      keep_goal_orientation: false   # whether to prevent the gpal orientation from being smoothed
+      minimum_turning_radius: 0.50  # minimum turning radius the robot can perform. Can be set to 0.0 (or w_curve can be set to 0.0 with the same effect) for diff-drive/holonomic robots
+      w_curve: 0.0                 # weight to enforce minimum_turning_radius
+      w_dist: 0.0                   # weight to bind path to original as optional replacement for cost weight
+      w_smooth: 2000000.0           # weight to maximize smoothness of path
+      w_cost: 100.0                 # weight to steer robot away from collision and cost
 
+      # Parameters used to improve obstacle avoidance near cusps (forward/reverse movement changes)
+      w_cost_cusp_multiplier: 3.0   # option to use higher weight during forward/reverse direction change which is often accompanied with dangerous rotations
+      cusp_zone_length: 2.5         # length of the section around cusp in which nodes use w_cost_cusp_multiplier (w_cost rises gradually inside the zone towards the cusp point, whose costmap weight eqals w_cost*w_cost_cusp_multiplier)
+
+      # Points in robot frame to grab costmap values from. Format: [x1, y1, weight1, x2, y2, weight2, ...]
+      # IMPORTANT: Requires much higher number of iterations to actually improve the path. Uncomment only if you really need it (highly elongated/asymmetric robots)
+      # cost_check_points: [-0.185, 0.0, 1.0]
+
+      optimizer:
+        max_iterations: 70            # max iterations of smoother
+        debug_optimizer: false        # print debug info
+        gradient_tol: 5e3
+        fn_tol: 1.0e-15
+        param_tol: 1.0e-20
 behavior_server:
   ros__parameters:
     costmap_topic: local_costmap/costmap_raw # 订阅本地代价地图的原始数据话题
@@ -403,9 +423,9 @@ velocity_smoother:
     smoothing_frequency: 40.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [1.0, 1.0, 1.5] # 最大速度限制
-    min_velocity: [-1.0, -1.0, -1.5] # 最小速度限制
-    max_accel: [2.0, 2.0, 2.0] # 最大加速度限制
+    max_velocity: [1.0, 1.0, 1.4] # 最大速度限制
+    min_velocity: [-1.0, -1.0, -1.4] # 最小速度限制
+    max_accel: [1.0, 1.0, 1.0] # 最大加速度限制
     max_decel: [-1.0, -1.0, -1.0]
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
     velocity_timeout: 1.0
