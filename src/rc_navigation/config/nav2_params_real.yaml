@@ -336,7 +336,7 @@ planner_server:
       plugin: "nav2_navfn_planner/NavfnPlanner"
       tolerance: 0.1 # 目标点容差0.5米，允许规划路径终点在此范围内
       use_astar: true # ！！！！是否启动A*算法，若false则启动Dijkstra算法，A*快速响应动态障碍，适合人员流动频繁的区域
-      allow_unknown: true # 允许在位置区域通行
+      allow_unknown: False # 允许在位置区域通行
 smoother_server:
   ros__parameters:
     use_sim_time: True
