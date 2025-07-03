@@ -102,7 +102,7 @@ controller_server:
       adjustHeadingSpeed: 0.2 # angular speed to adjust heading
       # 
       time_steps: 40 # prediction horizon = time_steps x model_dt = 3s
-      model_dt: 0.025 # =1/controller_frequency
+      model_dt: 0.05 # =1/controller_frequency
       batch_size: 2000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
       vx_std: 0.5
       vy_std: 0.5
@@ -428,7 +428,7 @@ velocity_smoother:
     feedback: "OPEN_LOOP"
     max_velocity: [3.0, 3.0, 4.0] # 最大速度限制
     min_velocity: [-3.0, -3.0, -4.0] # 最小速度限制
-    max_accel: [5.0, 5.0, 3.0] # 最大加速度限制
-    max_decel: [-6.0, -6.0, -3.0]
+    max_accel: [1.5, 1.5, 2.0] # 最大加速度限制
+    max_decel: [-1.5, -1.5, -2.0]
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
     velocity_timeout: 0.2
