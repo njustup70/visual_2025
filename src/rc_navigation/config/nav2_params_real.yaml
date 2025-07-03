@@ -72,7 +72,7 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 40.0
+    controller_frequency: 20.0
     min_x_velocity_threshold: 0.005
     min_y_velocity_threshold: 0.005
     min_theta_velocity_threshold: 0.01
@@ -103,7 +103,7 @@ controller_server:
       # 
       time_steps: 40 # prediction horizon = time_steps x model_dt = 3s
       model_dt: 0.025 # =1/controller_frequency
-      batch_size: 3000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
+      batch_size: 2000 # Count of randomly sampled candidate trajectories from current optimal control sequence in a given iteration. 1000 @ 50 Hz or 2000 @ 30 Hz seems to produce good results.
       vx_std: 0.5
       vy_std: 0.5
       wz_std: 0.2
@@ -200,8 +200,8 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 10.0  # 代价地图更新频率(Hz)
-      publish_frequency: 10.0 # 地图数据发布频率(Hz)
+      update_frequency: 20.0  # 代价地图更新频率(Hz)
+      publish_frequency: 20.0 # 地图数据发布频率(Hz)
       global_frame: odom     # 全局坐标系（使用里程计坐标系）
       robot_base_frame: base_link  # 机器人本体坐标系
       use_sim_time: false     # 使用仿真时间
@@ -282,7 +282,7 @@ global_costmap:
       robot_radius: 0.22 # 机器人碰撞半径0.22米，用于膨胀层生成避障区域
       resolution: 0.05 # 地图分辨率为5厘米/像素
       track_unknown_space: False # 将未知区域视为可通行区域
-      plugins: ["static_layer", "obstacle_layer","inflation_layer","bounding_box_layer"]
+      plugins: ["static_layer", "obstacle_layer","inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayerUltra"
         # plugin: "costmap_intensity::ObstacleLayerIntensity"
@@ -303,11 +303,6 @@ global_costmap:
           raytrace_min_range: 0.2
           clearing: True
           marking: True
-      bounding_box_layer:
-        plugin: "nav2_costmap_2d::BoundingBoxLayer"
-        enabled: true
-        bottom_left: [-0.4, -0.1]   # 左下角坐标（与origin一致）
-        top_right: [7.6, 7.9]       # 右上角坐标（计算：8-0.4=7.6，8-0.1=7.9）
       static_layer:  # 静态地图层
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -436,4 +431,4 @@ velocity_smoother:
     max_accel: [5.0, 5.0, 3.0] # 最大加速度限制
     max_decel: [-6.0, -6.0, -3.0]
     deadband_velocity: [0.0, 0.0, 0.0] # 速度死区，忽略微小速度指令
-    velocity_timeout: 1.0
+    velocity_timeout: 0.2
