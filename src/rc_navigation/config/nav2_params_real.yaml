@@ -237,6 +237,7 @@ local_costmap:
         enabled: True
         cost_scaling_factor: 2.0
         inflation_radius: 1.20 
+        inflate_unknown: false
       always_send_full_costmap: True # 始终发布完整地图
                         
 
@@ -280,8 +281,8 @@ global_costmap:
       use_sim_time: false
       robot_radius: 0.22 # 机器人碰撞半径0.22米，用于膨胀层生成避障区域
       resolution: 0.05 # 地图分辨率为5厘米/像素
-      track_unknown_space: true # 将未知区域视为可通行区域
-      plugins: ["static_layer", "obstacle_layer","inflation_layer"]
+      track_unknown_space: False # 将未知区域视为可通行区域
+      plugins: ["static_layer", "obstacle_layer","inflation_layer","bounding_box_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayerUltra"
         # plugin: "costmap_intensity::ObstacleLayerIntensity"
@@ -302,13 +303,20 @@ global_costmap:
           raytrace_min_range: 0.2
           clearing: True
           marking: True
+      bounding_box_layer:
+        plugin: "nav2_costmap_2d::BoundingBoxLayer"
+        enabled: true
+        bottom_left: [-0.4, -0.1]   # 左下角坐标（与origin一致）
+        top_right: [7.6, 7.9]       # 右上角坐标（计算：8-0.4=7.6，8-0.1=7.9）
       static_layer:  # 静态地图层
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
+        unknown_value_to_free: False
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 2.0 # 代价值随距离的衰减系数，值越大衰减越快
         inflation_radius: 1.20
+        inflate_unknown: false
       always_send_full_costmap: True
 
 map_server:
