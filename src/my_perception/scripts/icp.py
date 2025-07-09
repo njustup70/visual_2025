@@ -8,7 +8,7 @@ class PointMatcher:
         # 定义源坐标系中的四个点 (x, y, yaw)
         x_bias=(0.357+0.13255)*2
         y_bias=-(0.357+0.3288)
-        self.source_points = [
+        self.target_points = [
             [0.0, 0.0, 0],    # 左下
             [0.0, -8-y_bias, 0],    # 右下
             [15.0-x_bias, -8-y_bias, 180],    # 右上
@@ -16,7 +16,7 @@ class PointMatcher:
         ]
         
         # 定义目标坐标系中的四个点 (x, y, yaw)
-        self.target_points = [
+        self.source_points = [
             [-0.008, 0.005, 1.2],   # 左下
             [0.098, -7.266, 1.9],   # 右下
             [14.029, -6.456, -178.8],   # 右上
@@ -102,8 +102,9 @@ class PointMatcher:
         
         # 保存最优参数
         self.transform_params = result.x
+        self.theta_rad= np.deg2rad(self.transform_params[2])
         print(f"匹配参数: tx={result.x[0]:.4f}, ty={result.x[1]:.4f}, "
-              f"θ={result.x[2]:.4f}°, scale={result.x[3]:.4f}")
+              f"θ={result.x[2]:.4f}°, scale={result.x[3]:.4f},theta_rad={self.theta_rad:.8f} rad")
         
         # 应用变换到所有点
         self.transformed_points = [self.transform_point(p, self.transform_params) 
