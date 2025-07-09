@@ -81,7 +81,6 @@ class PointMatcher:
         """可视化源点、目标点和变换后的点"""
         # 设置绘图参数
         plt.figure(figsize=(10, 8))
-        plt.title("四点点匹配可视化")
         plt.grid(True)
         plt.xlabel("X")
         plt.ylabel("Y")
@@ -92,19 +91,19 @@ class PointMatcher:
         
         # 绘制源点
         for i, (x, y, yaw) in enumerate(self.source_points):
-            plt.scatter(x, y, s=120, c=colors[i], marker='o', edgecolors='k', label=f'源点{i+1}')
-            self._draw_arrow(x, y, yaw, colors[i], 1.0)
+            plt.scatter(x, y, s=120, c=colors[i], marker='o', edgecolors='k', label=f'source{i+1}')
+            # self._draw_arrow(x, y, yaw, colors[i], 1.0)
         
         # 绘制目标点
         for i, (x, y, yaw) in enumerate(self.target_points):
-            plt.scatter(x, y, s=120, c=colors[i], marker='s', edgecolors='k', label=f'目标点{i+1}')
-            self._draw_arrow(x, y, yaw, colors[i], 0.7)
+            plt.scatter(x, y, s=120, c=colors[i], marker='s', edgecolors='k', label=f'target{i+1}')
+            # self._draw_arrow(x, y, yaw, colors[i], 0.7)
         
         # 绘制变换后的点
         if self.transformed_points:
             for i, (x, y, yaw) in enumerate(self.transformed_points):
-                plt.scatter(x, y, s=120, c=colors[i], marker='^', edgecolors='k', label=f'变换点{i+1}')
-                self._draw_arrow(x, y, yaw, colors[i], 1.0)
+                plt.scatter(x, y, s=120, c=colors[i], marker='^', edgecolors='k', label=f'transform{i+1}')
+                # self._draw_arrow(x, y, yaw, colors[i], 1.0)
         
         # 添加图例并避免重复
         handles, labels = plt.gca().get_legend_handles_labels()
