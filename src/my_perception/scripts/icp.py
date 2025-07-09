@@ -6,11 +6,13 @@ import matplotlib as mpl
 class PointMatcher:
     def __init__(self):
         # 定义源坐标系中的四个点 (x, y, yaw)
+        x_bias=(0.357+0.13255)*2
+        y_bias=-(0.357+0.3288)
         self.source_points = [
             [0.0, 0.0, 0],    # 左下
-            [0.0, -(8-0.357-0.3288), 0],    # 右下
-            [15.0-0.39-0.13255, -(8-0.357-0.3288), 180],    # 右上
-            [15.0-0.39-0.13255, 0.0, 180],    # 左上
+            [0.0, -8-y_bias, 0],    # 右下
+            [15.0-x_bias, -8-y_bias, 180],    # 右上
+            [15.0-x_bias, 0.0, 180],    # 左上
         ]
         
         # 定义目标坐标系中的四个点 (x, y, yaw)
@@ -24,7 +26,38 @@ class PointMatcher:
         # 存储变换参数 (tx, ty, theta, scale)
         self.transform_params = None
         self.transformed_points = None
+        self._calculate_side_lengths()
+    def _calculate_side_lengths(self):
+        """计算并打印两个坐标系的边长"""
+        # 计算源坐标系边长
+        src_bl = np.array(self.source_points[0][:2])  # 左下
+        src_br = np.array(self.source_points[1][:2])  # 右下
+        src_tr = np.array(self.source_points[2][:2])  # 右上
+        src_tl = np.array(self.source_points[3][:2])  # 左上
         
+        self.src_width = np.linalg.norm(src_bl - src_br)  # 短边（垂直边）
+        self.src_height = np.linalg.norm(src_bl - src_tl) # 长边（水平边）
+        
+        # 计算目标坐标系边长
+        tgt_bl = np.array(self.target_points[0][:2])
+        tgt_br = np.array(self.target_points[1][:2])
+        tgt_tr = np.array(self.target_points[2][:2])
+        tgt_tl = np.array(self.target_points[3][:2])
+        
+        self.tgt_width = np.linalg.norm(tgt_bl - tgt_br)   # 短边
+        self.tgt_height = np.linalg.norm(tgt_bl - tgt_tl)  # 长边
+        
+        # 打印结果
+        print("\n=== 坐标系边长计算 ===")
+        print("【源坐标系】")
+        print(f"长边（水平）长度: {self.src_height:.4f} 单位")
+        print(f"短边（垂直）长度: {self.src_width:.4f} 单位")
+        print(f"长宽比: {self.src_height/self.src_width:.4f}")
+        
+        print("\n【目标坐标系】")
+        print(f"长边长度: {self.tgt_height:.4f} 单位")
+        print(f"短边长度: {self.tgt_width:.4f} 单位")
+        print(f"长宽比: {self.tgt_height/self.tgt_width:.4f}")
     def transform_point(self, point, params):
         """应用仿射变换到单个点"""
         tx, ty, theta, scale = params
