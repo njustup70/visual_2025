@@ -13,10 +13,17 @@ class PointMatcher:
         y_base_bias=-0.357 #车体中心距离地图
         laser_x_bias=0.13255 #激光雷达偏移
         laser_y_bias=-0.3288 #激光雷达偏移
-        left_back_point=[0.0+x_base_bias+laser_x_bias, 0.0+y_base_bias+laser_y_bias] #左下
-        right_back_point=[0.0+x_base_bias+laser_x_bias, -8.0-y_base_bias+laser_y_bias] #右下
-        right_front_point=[15.0-x_base_bias-laser_x_bias, -8.0-y_base_bias-laser_y_bias] #右上
-        left_front_point=[15.0-x_base_bias-laser_x_bias, 0.0+y_base_bias-laser_y_bias] #左上
+        # left_back_point=[0.0+x_base_bias+laser_x_bias, 0.0+y_base_bias+laser_y_bias] #左下
+        # right_back_point=[0.0+x_base_bias+laser_x_bias, -8.0-y_base_bias+laser_y_bias] #右下
+        # right_front_point=[15.0-x_base_bias-laser_x_bias, -8.0-y_base_bias-laser_y_bias] #右上
+        # left_front_point=[15.0-x_base_bias-laser_x_bias, 0.0+y_base_bias-laser_y_bias] #左上
+        '''
+        雷达贴边的点
+        '''
+        left_back_point=[-0.032415,0.082415] #左下
+        right_back_point=[-0.032415,-8.082415] #右下
+        right_front_point=[15.01785,-8.082415] #右上
+        left_front_point=[15.01785,0.082415] #左上
         self.target_points = [
             left_back_point,    # 左下
             right_back_point,   # 右下
@@ -26,10 +33,10 @@ class PointMatcher:
         
         # 定义目标坐标系中的四个点 (x, y)
         self.source_points = [
-            [-0.002, 0.014],   # 左下
-            [0.102, -7.266],   # 右下
-            [14.029, -6.456],   # 右上
-            [13.935, 0.837]    # 左上
+            [-0.083, 0.02],   # 左下
+            [-0.36, -8.183],   # 右下
+            [14.635, -8.685],   # 右上
+            [14.943, -0.566]    # 左上
         ]
         
         # 存储变换参数 (tx, ty, theta, scale)
