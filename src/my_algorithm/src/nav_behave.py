@@ -56,6 +56,7 @@ class EnhancedNavigationHandler:
         self.nav_reset=False
         self.handle_reset = False # 手动重新导航 
         self.align_finished=False # 对齐完成标志
+
         # 声明动态参数（带默认值）
         self.node.declare_parameter('max_failures', 20)
         self.node.declare_parameter('goal_timeout', 60.0)
@@ -145,6 +146,7 @@ class EnhancedNavigationHandler:
                     self.pending_goal = None
         return result
 
+
     def set_goal(self, point):
         self.best_goal = point
 
@@ -227,6 +229,7 @@ class EnhancedNavigationHandler:
             current_pose.transform.rotation.z, 
             current_pose.transform.rotation.w) * 2.0)
         
+
         # target_yaw = self.normalize_angle(math.atan2(
         #     self.center_y - point.y, 
         #     self.center_x - point.x))
@@ -284,6 +287,7 @@ class EnhancedNavigationHandler:
             self.active_goal= self.best_goal
             print("\033[1;35m point x:{} y:{}\033[0m".format(self.best_goal.x,self.best_goal.y))
             self.publish_goal(self.active_goal)
+
             #切换状态
             self.current_state = self.NAVIGATING
             self.align_finished= False
@@ -321,6 +325,7 @@ class EnhancedNavigationHandler:
             if nav_state == "IDLE":
                 self.handle_reset = True
             
+
 
 class OptimalGoalNavigator(Node):
     """最优目标导航节点"""
