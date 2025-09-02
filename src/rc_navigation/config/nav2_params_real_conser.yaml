@@ -131,7 +131,6 @@ controller_server:
       GoalAngleCritic: # 当机器人距离目标点较近时，鼓励它调整角度朝向目标的朝向
         cost_weight: 10.0
         threshold_to_consider: 0.8 #距离三米开始对齐
-
       GoalCritic: # 鼓励机器人靠近最终目标位置
         enabled: true
         cost_power: 1

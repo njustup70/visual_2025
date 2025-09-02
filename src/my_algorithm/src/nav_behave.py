@@ -56,6 +56,7 @@ class EnhancedNavigationHandler:
         self.nav_reset=False
         self.handle_reset = False # 手动重新导航 
         self.align_finished=False # 对齐完成标志
+
         # 声明动态参数（带默认值）
         self.node.declare_parameter('max_failures', 20)
         self.node.declare_parameter('goal_timeout', 60.0)
@@ -284,6 +285,7 @@ class EnhancedNavigationHandler:
             self.active_goal= self.best_goal
             print("\033[1;35m point x:{} y:{}\033[0m".format(self.best_goal.x,self.best_goal.y))
             self.publish_goal(self.active_goal)
+
             #切换状态
             self.current_state = self.NAVIGATING
             self.align_finished= False
