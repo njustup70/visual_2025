@@ -45,7 +45,7 @@ rclcpp_components_register_node(${ImuTransform}
   EXECUTABLE ${ImuTransform}_node
 )
 install(
-  DIRECTORY launch config scripts
+  DIRECTORY launch config 
   DESTINATION share/${PROJECT_NAME}
 )
 
