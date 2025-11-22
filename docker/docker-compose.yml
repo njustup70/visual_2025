@@ -30,8 +30,8 @@ services:
       - /dev:/dev
     user: "Elaina"
     working_dir: "/home/Elaina/ros2_driver" # 指定默认工作目录
-    # entrypoint: [ "/bin/bash", "-i", "-c", " source ~/.bashrc && ros2 launch rc_bringup driver_with_utils.launch.py" ]
-    entrypoint: [ "/bin/bash" ]
+    entrypoint: [ "/bin/bash", "-i", "-c", " source ~/.bashrc && ros2 launch rc_bringup driver_with_utils.launch.py" ]
+    # entrypoint: [ "/bin/bash" ]
   logical_service:
     <<: *common # 引用公共配置
     image: elainasuki/rc2025:ros2_logical
@@ -41,7 +41,7 @@ services:
       - logical_volume:/home/Elaina/logical
     user: "Elaina"
     working_dir: "/home/Elaina/logical" # 指定默认
-    entrypoint: [ '/bin/bash' ]
+    entrypoint: [ '/bin/bash', '-i', '-c', ' source ~/.bashrc && ros2 run my_perception slam_riqiang.py' ]
   voxel_service:
     <<: *common # 引用公共配置
     image: elainasuki/rc2025:voxel_slam
