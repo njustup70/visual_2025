@@ -23,7 +23,7 @@ services:
   driver_service:
     <<: *common # 引用公共配置
     image: elainasuki/rc2025:ros2_driver
-    container_name: ros2driver_container_runtime
+    container_name: ros2driver_runtime
     volumes:
       - ros2_driver_volume:/home/Elaina/ros2_driver
       - /var/run/docker.sock:/var/run/docker.sock
@@ -32,7 +32,20 @@ services:
     working_dir: "/home/Elaina/ros2_driver" # 指定默认工作目录
     # entrypoint: [ "/bin/bash", "-i", "-c", " source ~/.bashrc && ros2 launch rc_bringup driver_with_utils.launch.py" ]
     entrypoint: [ "/bin/bash" ]
+  logical_service:
+    <<: *common # 引用公共配置
+    image: elainasuki/rc2025:ros2_logical
+    container_name: logical_runtime
+    volumes:
+      - /dev:/dev
+      - logical_volume:/home/Elaina/logical
+    user: "Elaina"
+    working_dir: "/home/Elaina/logical" # 指定默认
+    entrypoint: [ '/bin/bash' ]
 volumes:
   ros2_driver_volume:
     external: true
     name: ros2_driver_volume
+  logical_volume:
+    external: true
+    name: logical_volume
