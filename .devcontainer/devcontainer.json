@@ -1,8 +1,8 @@
 {
-    "name": "visual-container",
+    "name": "logical_container",
     "dockerComposeFile": "docker-compose.yml",
-    "service": "visual-service",
-    "workspaceFolder": "/home/Elaina/visual",
+    "service": "logical_service",
+    "workspaceFolder": "/home/Elaina/logical",
     "shutdownAction": "stopCompose",
     "customizations": {
         "vscode": {
